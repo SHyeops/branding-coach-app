@@ -7,7 +7,14 @@ from openai import OpenAI
 
 QUESTIONS = {
     "상품": ["이 상품을 왜 만들었나요?", "누구에게 가장 도움이 되길 바라나요?", "다른 상품과 다른, 나만 하는 것은 무엇인가요?"],
-    "재능·서비스": ["이 일을 왜 시작했나요?", "누가 배우러(찾아) 오나요?", "다른 곳과 다른, 나만 하는 것은 무엇인가요?"],
+    "서비스": ["이 일을 왜 시작했나요?", "누가 배우러(찾아) 오나요?", "다른 곳과 다른, 나만 하는 것은 무엇인가요?"],
+}
+# 형태별 입력 예시 (테스트 데이터 P02·P08에서 가져옴)
+EXAMPLES = {
+    "상품": {"name": "예: 못난이 사과", "desc": "예: 모양이 고르지 않은 사과 5kg 박스",
+            "memo": "예: 맛은 똑같은데 버려지는 사과가 아까웠어요. 가족 단위 손님을 생각하고 있어요."},
+    "서비스": {"name": "예: 출근 전 30분 PT", "desc": "예: 동네 1인 PT 스튜디오의 아침 1:1 운동 프로그램",
+             "memo": "예: 직장인 시절 운동할 시간이 없었던 경험에서 시작했어요."},
 }
 MIN_LEN = 10  # shortcut: 글자 수로만 '짧은 답' 판단, 이후 AI 판단으로 교체
 
@@ -78,10 +85,13 @@ if s.step == 0:
 
 elif s.step == 1:
     st.header("먼저 어떤 걸 브랜딩할지 알려 주세요")
-    s.kind = st.radio("형태", list(QUESTIONS), horizontal=True)
-    s.name = st.text_input("이름", s.get("name", ""), placeholder="예: 못난이 사과")
-    s.desc = st.text_area("한 줄 설명", s.get("desc", ""), placeholder="예: 모양이 고르지 않은 사과 5kg 박스")
-    s.memo = st.text_area("(선택) 이미 구상 중인 내용이 있다면 자유롭게 적어 주세요", s.get("memo", ""))
+    kinds = list(QUESTIONS)
+    s.kind = st.radio("형태", kinds, index=kinds.index(s.get("kind", "상품")), horizontal=True,
+                      format_func=lambda k: "서비스 (레슨·클래스·코칭 포함)" if k == "서비스" else k)
+    ex = EXAMPLES[s.kind]
+    s.name = st.text_input("이름", s.get("name", ""), placeholder=ex["name"])
+    s.desc = st.text_area("한 줄 설명", s.get("desc", ""), placeholder=ex["desc"])
+    s.memo = st.text_area("(선택) 이미 구상 중인 내용이 있다면 자유롭게 적어 주세요", s.get("memo", ""), placeholder=ex["memo"])
     if st.button("시작하기", type="primary"):
         if not s.name.strip() or not s.desc.strip():
             st.warning("이름과 한 줄 설명을 적어 주세요.")
