@@ -1,4 +1,4 @@
-"""From Your Garage — 질문으로 찾는 내 브랜드. 메뉴: 활용 템플릿 / 1:1 멘토링 / 브랜드 코칭(단계: 0 홈 → 1 기본 정보 → 2 진단 질문 → 3 성향 찾기 → 4 되비추기 → 5 리포트) / 브랜드 스토리"""
+"""From Your Garage — 질문으로 찾는 내 브랜드. 메뉴: 활용 템플릿 / 1:1 멘토링 / 브랜드 코칭(단계: 0 홈 → 1 기본 정보 → 2 생각 정리(1인칭 장면 6개) → 3 간판 성향 → 4 되비추기 → 5 리포트) / 브랜드 스토리"""
 import base64
 import html
 import json
@@ -13,20 +13,10 @@ from openai import OpenAI
 
 from brands import BRANDS, MARQUEE
 from mentors import MENTORS
+from scenes import ASK_DETAIL, SCENES, TYPES, brand_type, flat_options
 
-# 진단 질문 6개 = 3묶음(왜 / 누구에게 / 무엇이 다른가) × 2
 APP_NAME = "From Your Garage"
-
-QUESTIONS = {
-    "상품": ["이 상품에 관심을 갖게 된 계기나 이유는 무엇인가요?", "이 상품으로 이루고 싶은 것은 무엇인가요?",
-            "어떤 사람들에게 이 상품이 필요할까요?", "그 사람은 지금 어떤 점이 불편하거나 아쉬울까요?",
-            "다른 상품과 다르게 하고 있는(또는 하고 싶은) 점은 무엇인가요?", "손님이 이 상품에 대해 꼭 기억했으면 하는 한 가지는 무엇인가요?"],
-    "서비스": ["이 일에 관심을 갖게 된 계기나 이유는 무엇인가요?", "이 일로 이루고 싶은 것은 무엇인가요?",
-             "어떤 사람이 찾아오면 좋겠나요?", "그 사람은 지금 어떤 점이 불편하거나 아쉬울까요?",
-             "다른 곳과 다르게 하고 있는(또는 하고 싶은) 점은 무엇인가요?", "손님이 이 서비스에 대해 꼭 기억했으면 하는 한 가지는 무엇인가요?"],
-}
-GROUPS = ["왜", "왜", "누구에게", "누구에게", "무엇이 다른가", "무엇이 다른가"]
-N = len(GROUPS)
+N = 6  # 장면 수 (scenes.py) = 3묶음(왜 / 누구에게 / 무엇이 다른가) × 2
 
 # 성향 찾기 1단계: 둘 중 고르기 (선택지는 고정 목록 → 사람마다 비교 가능, 고른 것 = 근거)
 TRAITS = [
@@ -60,21 +50,35 @@ REFLECT = """사용자가 답한 내용을 "말씀하신 건 이런 뜻이에요
 {rules}
 
 {info}"""
-BRIEF = """아래 내용으로 브랜드 분석 리포트를 만들어줘. 항목: 미션 / 핵심 가치 3개 / 성격·말투 / 핵심 메시지 / 슬로건 3안 / 무드 키워드.
+# 시작 채널은 이 목록 안에서만 (기획서 3-1) → AI가 플랫폼을 지어내지 않게
+PLATFORMS = """농작물·식품: 네이버 스마트스토어, 쿠팡, 카카오톡 선물하기 / 인스타그램, 카카오톡 채널, 네이버 블로그
+수공예·일반 상품: 아이디어스, 네이버 스마트스토어 / 인스타그램, 플리마켓·팝업
+새 상품 첫 출시: 와디즈(펀딩) / 인스타그램
+동네 기반 서비스: 네이버 플레이스(예약), 당근 / 당근, 인스타그램
+레슨·코칭·전문 서비스: 숨고, 크몽 / 네이버 블로그, 유튜브, 인스타그램
+클래스·취미: 클래스 플랫폼(프립·탈잉·클래스101) / 인스타그램"""
+BRIEF = """아래 내용으로 브랜드 분석 리포트를 만들어줘. 항목: 미션 / 핵심 가치 3개 / 성격·말투 / 핵심 메시지 / 슬로건 3안 / 무드 키워드 / 시작하기.
 항목마다 아래 형식을 지킨다.
 ### 항목 이름
 **결과:** 내용
 **이유:** 왜 이렇게 정리했는지 1~2문장
-**근거가 된 내 답:** 사용자 정보의 문장을 「」 안에 한 글자도 바꾸지 말고 그대로 옮긴다 (1~2개)
+**근거가 된 내 답:** 사용자 정보의 문장을 「」 안에 한 글자도 바꾸지 말고 그대로 옮긴다 (1~2개). 단 앞에 붙은 "고른 것:", "내가 쓴 말:" 같은 꼬리표는 빼고 내용만 옮긴다
 **쓸 때 팁:** 상세페이지·SNS·간판 등 어디에 어떻게 쓰면 좋은지 1문장
+미션과 핵심 메시지는 정답처럼 하나로 정하지 말고, **결과:** 아래에 "1안: …" 줄과 "2안: …" 줄로 서로 다른 방향 2개를 쓴다.
+시작하기는 아래 [시작 채널 목록] 안에서만 1~2곳을 고르고, 이번 주에 바로 할 수 있는 작은 일 3가지를 쓴다. 수수료·조건은 말하지 않는다.
+사용자 정보의 "앱이 계산한 브랜드 유형"은 방향 참고용이다. 유형 이름을 근거로 새 사실을 만들지 않는다.
 정보가 부족해 채울 수 없는 항목(또는 항목의 일부)은 결과에 "아직 정해지지 않았어요. (채우려면: 사용자에게 던질 질문 1개)"라고 쓰고 근거는 비운다. 질문에는 새 사실을 넣지 않는다.
 같은 표현을 반복해 항목을 억지로 채우지 말고, 근거가 있는 것만 쓴다. 성격·말투는 사용자가 고른 성향과 말투 예시를 근거로 쓴다.
+무드 키워드는 고른 성향 낱말을 그대로 되풀이하지 말고, 사진·디자인에 바로 쓸 수 있는 색·소재·장면 낱말 5개로 쓴다 (근거는 고른 성향).
 {rules}
+
+[시작 채널 목록] (판매 / 홍보)
+{platforms}
 
 {info}"""
 # 컬러는 사실이 아니라 제안 → 3안을 한 번에 받아 "다른 안 보기"로 넘김
 COLORS = """아래 사용자 정보(특히 고른 성향)에 어울리는 브랜드 컬러 조합 3안을 추천해줘. 안마다 색 3개(메인/보조/강조)를 고른다.
-반드시 JSON만 출력한다: {{"palettes": [{{"name": "조합 이름", "colors": [{{"hex": "#RRGGBB", "role": "메인"}}, ...], "why": "이 조합을 고른 이유 1~2문장", "quote": "근거가 된 사용자 정보 문장 1개를 한 글자도 바꾸지 않고 그대로"}}]}}
+반드시 JSON만 출력한다: {{"palettes": [{{"name": "조합 이름", "colors": [{{"hex": "#RRGGBB", "role": "메인"}}, ...], "why": "이 조합을 고른 이유 1~2문장", "quote": "근거가 된 사용자 정보 문장 1개를 한 글자도 바꾸지 않고 그대로 (앞의 '고른 것:' 같은 꼬리표는 빼고)"}}]}}
 {rules}
 
 {info}"""
@@ -103,12 +107,15 @@ FOLLOWUP = """사용자가 아래 질문에 너무 짧게 답했다. 답을 더 
 상품·서비스 이름: {name}"""
 
 def info_text():
-    qa = "\n".join(f"- [{g}] {q}: {a}" for g, q, a in zip(GROUPS, QUESTIONS[s.kind], s.answers))
+    qa = "\n".join(f"- [{sc['group']}] {sc['ask']}: {a}" for sc, a in zip(SCENES[s.kind], s.answers))
     memo = s.memo.strip() or "(없음)"
     fix = s.get("fix", "").strip()
     out = f"[사용자 정보]\n형태: {s.kind}\n이름: {s.name}\n설명: {s.desc}\n구상 메모(참고용): {memo}\n질문과 답변:\n{qa}"
     if s.get("traits"):
         out += f"\n사용자가 고른 성향: {', '.join(s.traits)}\n사용자가 고른 말투 예시: {s.get('tone', '(없음)')}"
+    if s.step >= 4:
+        bt, _ = brand_type(s.kind, s.picks)
+        out += f"\n앱이 계산한 브랜드 유형(고른 보기로 계산, 방향 참고용): {bt}형 — {TYPES[bt]['desc']}"
     return out + (f"\n사용자 수정 요청: {fix}" if fix else "")
 
 
@@ -122,8 +129,9 @@ def fake_ai(template):
             {"name": "테스트 2안", "colors": [{"hex": "#6B4937", "role": "메인"}, {"hex": "#F6F0E4", "role": "보조"}, {"hex": "#D9A441", "role": "강조"}],
              "why": "(테스트 모드 예시) 두 번째 조합이에요.", "quote": a}]}, ensure_ascii=False)
     if template is BRIEF:
-        return (f"### 미션\n**결과:** (테스트 모드 예시) {s.name}의 미션\n**이유:** 예시 이유\n**근거가 된 내 답:** 「{a}」\n"
-                "**쓸 때 팁:** 예시 팁\n\n### 핵심 메시지\n**결과:** 아직 정해지지 않았어요. (채우려면: 손님이 꼭 기억했으면 하는 한 가지는?)")
+        return (f"### 미션\n**결과:**\n1안: (테스트 모드 예시) {s.name}의 미션 A\n2안: (테스트 모드 예시) {s.name}의 미션 B\n**이유:** 예시 이유\n"
+                f"**근거가 된 내 답:** 「{a}」\n**쓸 때 팁:** 예시 팁\n\n### 핵심 메시지\n**결과:**\n1안: 예시 메시지 A\n2안: 예시 메시지 B\n\n"
+                "### 시작하기\n**결과:** 인스타그램 / 이번 주 할 일: 1) 프로필 만들기 2) 첫 글 올리기 3) 사진 10장 찍기")
     if template is TEMPLATE:
         return f"### 예시 항목 1\n(테스트 모드 예시) {s.name} 문구예요.\n두 번째 줄이에요.\n\n### 예시 항목 2\n(테스트 모드 예시) {a}"
     if template is REFLECT:
@@ -138,7 +146,7 @@ def ask_ai(template, **extra):
     model = os.environ.get("OPENAI_MODEL")
     if not model:
         return None, "모델 설정(OPENAI_MODEL)이 없어요. .env 또는 Secrets를 확인해 주세요."
-    prompt = template.format(rules=RULES, info=info_text(), **extra)  # 형식 오류는 숨기지 않고 바로 드러냄
+    prompt = template.format(rules=RULES, info=info_text(), platforms=PLATFORMS, **extra)  # 형식 오류는 숨기지 않고 바로 드러냄
     try:
         res = OpenAI().chat.completions.create(model=model, messages=[{"role": "user", "content": prompt}])
         return res.choices[0].message.content, None
@@ -179,9 +187,39 @@ if os.environ.get("FAKE_AI") == "1":
 s = st.session_state
 s.setdefault("step", 0)
 s.setdefault("q", 0)          # 현재 질문 번호 (0~N-1)
-s.setdefault("answers", [""] * N)
+s.setdefault("answers", [""] * N)  # AI에 넘기는 장면별 답 = "고른 것: … / 내가 쓴 말: …"
+s.setdefault("picks", [[] for _ in range(N)])  # 장면별 고른 보기
+s.setdefault("notes", [""] * N)               # 장면별 직접 쓴 한 줄
 s.setdefault("asked_more", [False] * N)
 s.setdefault("more", [""] * N)
+
+
+def bulbs(lit):
+    total = N + 1  # 장면 6 + 간판 성향
+    dots = "".join(f'<i class="bulb{" on" if k < lit else ""}"></i>' for k in range(total))
+    return f'<div class="bulbs" aria-label="아이디어 {lit}/{total} 켜짐">{dots}<span>아이디어 {lit}/{total}</span></div>'
+
+
+def wall(items, new=()):
+    """차고 벽: 브랜드 이름 + 지금까지 고른 생각을 포스트잇으로 (방금 고른 건 new)"""
+    notes = [(s.name, "name")] + [(x, "") for x in items] + [(x, "new") for x in new]
+    return ('<div class="wall"><span class="wall-label">차고 벽</span>'
+            + "".join(f'<span class="postit {c}" style="--r:{(j * 37) % 7 - 3}deg">{html.escape(x)}</span>' for j, (x, c) in enumerate(notes))
+            + "</div>")
+
+
+def wall_items(upto):
+    return [x for k in range(upto) for x in s.picks[k] + ([s.notes[k]] if s.notes[k].strip() else [])]
+
+
+def answer_text(chosen, note):
+    return " / ".join(p for p in [f"고른 것: {', '.join(chosen)}" if chosen else "", f"내가 쓴 말: {note.strip()}" if note.strip() else ""] if p)
+
+
+def two_options(item):
+    """리포트에서 미션·핵심 메시지의 1안/2안을 꺼냄 (형식이 다르면 빈 목록 → 고르기 생략)"""
+    sec = re.search(rf"###\s*{item}\s*\n(.*?)(?=\n###|\Z)", s.brief, re.S)
+    return [o.strip() for o in re.findall(r"[12]안:\s*(.+)", sec.group(1))][:2] if sec else []
 
 
 def go(step):
@@ -255,8 +293,9 @@ def show_templates():
 
 
 def mentor_head(m):
+    badge = f'<span class="mt-badge">{m["badge"]}</span>' if m.get("badge") else ""
     return (f'<div class="mt-head"><img class="mt-ava" alt="" src="data:image/svg+xml;base64,{svg_b64("mentors/" + m["avatar"])}">'
-            f'<div><div class="mt-name">{m["name"]}</div><div class="mt-role">{m["role"]} · {m["years"]}년차</div></div></div>'
+            f'<div><div class="mt-name">{m["name"]}{badge}</div><div class="mt-role">{m["role"]} · {m["years"]}년차</div></div></div>'
             f'<div class="bm-tags">{"".join(f"<span>#{k}</span>" for k in m["tags"])}</div>')
 
 
@@ -296,7 +335,7 @@ ICONS = {
     "확인": _svg.format('<circle cx="12" cy="12" r="9"/><path d="m8 12.2 2.8 2.8L16 9.5"/>'),
     "리포트": _svg.format('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>'),
 }
-HOME_STEPS = [("진단", "질문 6개 답하기"), ("성향", "성향 고르기"), ("확인", "내용 확인"), ("리포트", "리포트 받기")]
+HOME_STEPS = [("진단", "차고에서 나에게 묻기"), ("성향", "간판 느낌 고르기"), ("확인", "내용 확인"), ("리포트", "리포트 받기")]
 
 PAGES = {"브랜드 코칭": None, "활용 템플릿": show_templates, "브랜드 스토리": show_stories, "1:1 멘토링": show_mentors}
 page = st.segmented_control("메뉴", list(PAGES), default="브랜드 코칭", key="page", label_visibility="collapsed")
@@ -304,7 +343,7 @@ if PAGES.get(page):
     PAGES[page]()
     st.stop()
 
-STEPS = ["기본 정보", "진단", "성향", "확인", "리포트"]
+STEPS = ["기본 정보", "생각 정리", "간판", "확인", "리포트"]
 if s.step > 0:  # 상단 단계 표시
     cells = "".join(f'<div class="{"now" if k == s.step else "done" if k < s.step else ""}">{k}. {name}</div>'
                     for k, name in enumerate(STEPS, 1))
@@ -321,7 +360,7 @@ if s.step == 0:
     st.markdown(f"""<div class="home{" seen" if seen else ""}">{intro}
 <div class="hero"><span class="eyebrow">질문으로 찾는 내 브랜드</span>
 <div class="brand-title" role="heading" aria-level="1"><span class="by">From Your</span> <em>GARAGE</em></div>
-<div class="hero-copy"><span>세상엔 수많은 브랜드가 있어요.</span><span>{logo("amazon_white", "아마존")}도, {logo("google", "구글")}도 작은 차고에서 시작했죠.</span><span>당신의 브랜드도 여기서 시작되길 바라요.</span></div>
+<div class="hero-copy"><span>{logo("amazon_white", "아마존")}도, {logo("google", "구글")}도 작은 차고에서 시작했죠.</span><span>당신의 브랜드도 여기서 시작되길 바라요.</span></div>
 <p class="hero-sub">질문에 답하다 보면 "내가 원래 생각하던 게 이거였구나"를 찾아 정리해 드려요.<br><span class="time-chip">약 15분</span>이면 충분해요.</p></div>
 <div class="logo-band" aria-hidden="true">{marquee}</div>
 <div class="steps">{"".join(f'<div class="step-card"><b>STEP {n}</b>{text}{ICONS[k]}</div>' for n, (k, text) in enumerate(HOME_STEPS, 1))}</div></div>""",
@@ -332,7 +371,7 @@ if s.step == 0:
 
 elif s.step == 1:
     st.header("먼저 어떤 걸 브랜딩할지 알려 주세요")
-    kinds = list(QUESTIONS)
+    kinds = list(SCENES)
     s.kind = st.radio("형태", kinds, index=kinds.index(s.get("kind", "상품")), horizontal=True,
                       format_func=lambda k: "서비스 (레슨·클래스·코칭 포함)" if k == "서비스" else k)
     ex = EXAMPLES[s.kind]
@@ -347,23 +386,47 @@ elif s.step == 1:
 
 elif s.step == 2:
     i = s.q
-    st.progress((i + 1) / N, text=f"진단 질문 {i + 1}/{N} · {GROUPS[i]}")
-    st.subheader(QUESTIONS[s.kind][i])
+    sc = SCENES[s.kind][i]
+    st.markdown(f'<div class="scene-head"><span class="day">GARAGE DAY 1 · 장면 {i + 1}/{N}</span>{bulbs(i)}</div>'
+                f'<p class="scene">{sc["scene"]}</p><div class="ask">“{sc["ask"]}”</div>', unsafe_allow_html=True)
     if s.more[i]:
         st.info(s.more[i])
-    s.answers[i] = st.text_area("자유롭게 적어 주세요 (\"모르겠어요\"도 괜찮아요)", s.answers[i], key=f"a{i}")
-    short = 0 < len(s.answers[i].strip()) < MIN_LEN and not s.asked_more[i]
+    chosen = []
+    if sc["pick"] == 1:
+        opts = [o for o, _ in sc["options"]]
+        cur = s.picks[i][0] if s.picks[i] else None
+        v = st.radio("속마음", opts, index=opts.index(cur) if cur in opts else None, key=f"p{i}", label_visibility="collapsed")
+        chosen = [v] if v else []
+    elif sc["pick"] > 1:
+        groups = sc["options"] if isinstance(sc["options"][0][1], list) else [(f"최대 {sc['pick']}개까지 골라요", sc["options"])]
+        for g, (label, opts) in enumerate(groups):
+            names = [o for o, _ in opts]
+            chosen += st.pills(label, names, selection_mode="multi", default=[c for c in s.picks[i] if c in names], key=f"p{i}_{g}") or []
+    note = ""
+    if sc["pick"] == 0:
+        note = st.text_area("노트에 적어 보세요 (\"모르겠어요\"도 괜찮아요)", s.notes[i], key=f"n{i}")
+    elif sc.get("note"):
+        note = st.text_input("✏️ 노트에 한 줄 더 적기 (선택)", s.notes[i], key=f"n{i}", placeholder="예: 그때 있었던 일, 떠오른 사람")
+    elif detail := [ASK_DETAIL[c] for c in chosen if c in ASK_DETAIL]:  # 내용이 있어야 쓸모 있는 보기 → 한 줄 더 물음
+        note = st.text_input(f"✏️ 조금만 더: {detail[0]} (선택, 한 줄)", s.notes[i], key=f"n{i}")
+    s.picks[i], s.notes[i] = chosen, note
+    s.answers[i] = answer_text(chosen, note)
+    st.markdown(wall(wall_items(i), chosen + ([note.strip()] if note.strip() else [])), unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     if c1.button("이전") and i > 0:
         s.q -= 1
         st.rerun()
     if c2.button("다음", type="primary"):
-        if not s.answers[i].strip():
+        if sc["pick"] and not chosen:
+            st.warning("마음에 가장 가까운 걸 하나 이상 골라 주세요.")
+        elif 1 < sc["pick"] < 9 and len(chosen) > sc["pick"]:
+            st.warning(f"최대 {sc['pick']}개까지 골라 주세요. 가장 가까운 것만 남겨 볼까요?")
+        elif sc["pick"] == 0 and not note.strip():
             st.warning("한 줄이라도 적어 주세요.")
-        elif short:
+        elif sc["pick"] == 0 and len(note.strip()) < MIN_LEN and not s.asked_more[i]:
             s.asked_more[i] = True
             with st.spinner("조금 더 여쭤볼게요…"):
-                more, _ = ask_ai(FOLLOWUP, question=QUESTIONS[s.kind][i], answer=s.answers[i], name=s.name)
+                more, _ = ask_ai(FOLLOWUP, question=sc["ask"], answer=note, name=s.name)
             s.more[i] = more or "조금 더 들려주세요. 예를 들면 그때 어떤 상황이었는지, 누가 떠올랐는지요."
             st.rerun()
         elif i < N - 1:
@@ -373,9 +436,11 @@ elif s.step == 2:
             go(3)
 
 elif s.step == 3:
-    st.header("내 브랜드 성향 찾기")
+    st.markdown(f'<div class="scene-head"><span class="day">GARAGE DAY 1 · 마지막 장면</span>{bulbs(N)}</div>'
+                '<p class="scene">벽을 가득 채운 포스트잇을 본다. 이제 간판을 상상해 볼 차례.</p><div class="ask">“내 가게 간판은 어떤 느낌일까?”</div>',
+                unsafe_allow_html=True)
     if not s.get("traits"):
-        st.caption("1단계 · 둘 중 내 브랜드에 더 가까운 쪽을 골라 주세요. 정답은 없어요.")
+        st.caption("1단계 · 둘 중 내 간판에 더 가까운 쪽을 골라 주세요. 정답은 없어요.")
         ex = {name: line for pair in TRAITS for name, line in pair}
         picks = [st.radio(f"{a[0]} vs {b[0]}", [a[0], b[0]], key=f"t{k}", format_func=lambda o: f"{o} — “{ex[o]}”")
                  for k, (a, b) in enumerate(TRAITS)]
@@ -384,15 +449,16 @@ elif s.step == 3:
             st.rerun()
     else:
         st.caption(f"1단계에서 고른 성향: {' · '.join(s.traits)}")
-        st.caption("2단계 · 이 중 내 브랜드가 할 법한 말투를 하나 골라 주세요. (말투 예시일 뿐, 내용은 내 답변으로 채워져요)")
+        st.caption("2단계 · 간판 아래 붙일 한마디라면? 내 브랜드가 할 법한 말투를 하나 골라 주세요. (말투 예시일 뿐, 내용은 내 답변으로 채워져요)")
         tone = st.radio("말투", TONES[(s.traits[0], s.traits[1])], label_visibility="collapsed")
         c1, c2 = st.columns(2)
         if c1.button("성향 다시 고르기"):
             del s["traits"]
             st.rerun()
-        if c2.button("다음", type="primary"):
+        if c2.button("아이디어 ON!", type="primary"):
             s.tone = tone
             go(4)
+    st.markdown(wall(wall_items(N) + s.get("traits", [])), unsafe_allow_html=True)
 
 elif s.step == 4:
     st.header("제가 이해한 건 이런 뜻이에요")
@@ -426,6 +492,26 @@ else:
     else:
         tab_brief, tab_mentor = st.tabs(["정리본", "1:1 멘토링"])
         with tab_brief:
+            bt, reasons = brand_type(s.kind, s.picks)
+            tp = TYPES[bt]
+            st.markdown(f'<div class="type-card"><span class="eyebrow">내 브랜드 유형</span><div class="type-name">{bt}형</div>'
+                        f'<p class="type-desc">{tp["desc"]}</p><div class="type-why"><b>이 선택들 때문이에요</b>'
+                        f'{"".join(f"<span class=postit>{html.escape(r)}</span>" for r in reasons[bt])}</div>'
+                        f'<div class="type-tips"><div><b>이 유형이 잘하는 것</b>{tp["good"]}</div><div><b>조심할 것</b>{tp["care"]}</div></div></div>',
+                        unsafe_allow_html=True)
+            st.caption("유형은 AI가 아니라 고른 보기로 앱이 계산해요. 같은 선택이면 늘 같은 결과예요. (브랜딩 이론을 참고해 쉽게 만든 분류)")
+            by_logo = {b["logo"]: b for b in BRANDS}
+            for col, (key, why) in zip(st.columns(len(tp["like"])), tp["like"]):
+                col.markdown(f'**닮은 브랜드 · {by_logo[key]["name"]}**  \n{why}')
+                if col.button(f'{by_logo[key]["name"]} 이야기 보기', key=f"like_{key}"):
+                    brand_modal(by_logo[key])
+            picks = {item: two_options(item) for item in ["미션", "핵심 메시지"]}
+            if all(len(v) == 2 for v in picks.values()):
+                with st.container(border=True):
+                    st.subheader("내 브랜드 문장 고르기")
+                    st.caption("AI가 방향을 2개씩 제안했어요. 내 생각에 더 가까운 쪽을 고르면 그게 내 브랜드 문장이에요.")
+                    for item, opts in picks.items():
+                        st.radio(f"내 {item}", opts, key=f"choose_{item}")
             with st.container(border=True):
                 st.markdown(s.brief.replace("\n", "  \n"))  # 결과/이유/근거/팁이 한 줄로 붙지 않게
                 quotes = re.findall(r"「(.+?)」", s.brief)
