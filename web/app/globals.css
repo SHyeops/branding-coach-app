@@ -33,6 +33,9 @@ h2.page-h { font-size: clamp(30px, 4vw, 48px); line-height: 1.15; font-weight: 8
 .alert.warning { background: #4a4416; color: #fffbd0; }
 .alert.error { background: #4a1c1c; color: #ffb4b4; }
 .alert.success { background: #173d24; color: #8de0a6; }
+.exag p { margin: .5rem 0 0; font-size: .98rem; line-height: 1.55; }
+.exag span { color: #e9e3b4; }
+.exag small { display: block; margin-top: .5rem; opacity: .75; }
 .box { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); padding: 18px 20px; margin: .8rem 0; }
 .loading { display: flex; gap: 10px; align-items: center; padding: 18px 0; color: var(--ink-2); }
 .loading::before { content: ""; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--line-2); border-top-color: var(--amber); animation: spin .8s linear infinite; }

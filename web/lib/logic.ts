@@ -85,6 +85,8 @@ export function infoText(s: St) {
     const [bt] = brandType(s.kind, s.picks);
     out += `\n앱이 계산한 브랜드 유형(고른 보기로 계산, 방향 참고용): ${bt}형 — ${D.TYPES[bt].desc}`;
   }
+  const ex = findExaggeration(userText(s));  // 사용자 글의 과장 표현은 결과에 그대로 옮기지 않게 AI에 알림
+  if (ex.length) out += `\n[주의] 사용자 입력 중 과장·단정 표현: ${ex.map(e => e.word).join(", ")} → 결과 글에 그대로 쓰지 말고, 확인된 사실(재료·과정·경험)로 바꿔 쓴다.`;
   return out + (s.fix?.trim() ? `\n사용자 수정 요청: ${s.fix.trim()}` : "");
 }
 
@@ -133,3 +135,31 @@ export function sheetQuotes(s: St) {
 export const wallItems = (s: St, upto: number) =>
   Array.from({ length: upto }, (_, k) => [...s.picks[k], ...(s.notes[k].trim() ? [s.notes[k]] : [])]).flat();
 
+
+// ───────── 과장 표현 점검 (기획서 7번 안정성). AI가 아니라 정해진 규칙 → 비용 0원, 같은 글이면 늘 같은 결과(측정 지표로 사용)
+// 법률 판단이 아니라 참고 안내. 판정 기준은 식품·화장품 광고에서 흔히 문제 되는 유형을 쉽게 묶은 것
+export const EXAGGERATION: { cat: string; re: RegExp; tip: string }[] = [
+  { cat: "효능·질병 단정", re: /미백|주름\s*(?:개선|제거|사라\S*|없\S*)|피부\s*재생|면역력?\s*(?:강화|증진|향상)|살\s*빠\S*|체중\s*감량|다이어트\s*효과|디톡스|해독|혈압|혈당|당뇨|암\s*예방|질병\s*예방|완치|치료\s*효과|효과\s*보장/g,
+    tip: "식품·화장품은 기능이나 질병 예방·치료를 단정하면 문제가 될 수 있어요. '매일 챙기기 쉬운'처럼 경험이나 사실(재료·과정)로 바꿔 보세요." },
+  { cat: "성과 보장", re: /(?:합격|취업|수익|매출|성적|성공)\s*(?:보장|100\s*%)|무조건\s*(?:\S+\s*)?(?:합격|성공|수익|취업)|\d+\s*배\s*(?:매출|수익|성장)/g,
+    tip: "결과는 사람마다 달라서 '보장'은 과장 광고가 될 수 있어요. '합격 가능성을 높이는 첨삭', '실제 사례'처럼 말해 보세요." },
+  { cat: "근거 없는 최상급", re: /최고|최초|유일|국내\s*1\s*(?:등|위)|세계\s*최\S*|1\s*(?:등|위)|넘버\s*원|No\.?\s*1/gi,
+    tip: "최고·1위 같은 말은 객관적 근거(수상, 공인 순위)가 없으면 문제가 될 수 있어요. 근거가 있다면 출처를 함께 적어 주세요." },
+  { cat: "지나친 단정", re: /100\s*%|무조건|반드시|절대(?:로)?|완벽(?:하게|한)|부작용\s*(?:없\S*|0)/g,
+    tip: "100%·무조건 같은 단정은 오히려 믿음을 떨어뜨릴 수 있어요. 구체적인 사실이나 숫자의 근거로 바꿔 보세요." },
+];
+
+export type Exag = { cat: string; word: string; tip: string };
+/** 글에서 과장·단정 표현 찾기 (같은 유형의 같은 말은 한 번만) */
+export function findExaggeration(text: string): Exag[] {
+  const out: Exag[] = [];
+  for (const { cat, re, tip } of EXAGGERATION)
+    for (const m of text.matchAll(re)) {
+      const word = m[0].trim();
+      if (!out.some(o => o.cat === cat && o.word === word)) out.push({ cat, word, tip });
+    }
+  return out;
+}
+
+/** 사용자가 직접 쓴 글 전체 (이름·설명·메모·장면 메모) */
+export const userText = (s: St) => [s.name, s.desc, s.memo, ...s.notes, s.fix ?? ""].join("\n");

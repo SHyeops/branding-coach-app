@@ -5,6 +5,7 @@ import demoData from "@/lib/demo_P02.json";
 import {
   D, N, type St, type Kind, type Brand, type Mentor, type Palette, type PromptName, type Opt,
   emptyState, flatOptions, brandType, answerText, unmatched, asList, parseSheet, parsePalettes, chosen, sheetText, sheetQuotes, wallItems,
+  findExaggeration, userText,
 } from "@/lib/logic";
 
 type Page = "브랜드 코칭" | "활용 템플릿" | "브랜드 스토리" | "1:1 멘토링";
@@ -127,6 +128,22 @@ function PaletteView({ p, s }: { p: Palette; s: St }) {
   );
 }
 
+/** 과장·단정 표현 안내 (막지 않고 알려만 줌) */
+function ExagNote({ text, title = "과장으로 보일 수 있는 표현이 있어요" }: { text: string; title?: string }) {
+  const found = findExaggeration(text);
+  if (!found.length) return null;
+  const cats = [...new Set(found.map(f => f.cat))];
+  return (
+    <div className="alert warning exag" role="status">
+      <b>⚠️ {title}</b>
+      {cats.map(c => (
+        <p key={c}><b>{c}:</b> {found.filter(f => f.cat === c).map(f => `“${f.word}”`).join(", ")}<br /><span>{found.find(f => f.cat === c)!.tip}</span></p>
+      ))}
+      <small>광고 표현을 참고로 알려 드리는 안내예요. 바꾸지 않아도 다음으로 넘어갈 수 있어요.</small>
+    </div>
+  );
+}
+
 const Postits = ({ items }: { items: string[] }) => <>{items.map((x, i) => <span key={i} className="postit">{x}</span>)}</>;
 
 export default function App() {
@@ -225,6 +242,7 @@ export default function App() {
         <label className="field"><span>이름</span><input value={s.name} placeholder={ex.name} onChange={e => up({ name: e.target.value })} /></label>
         <label className="field"><span>한 줄 설명</span><textarea value={s.desc} placeholder={ex.desc} onChange={e => up({ desc: e.target.value })} /></label>
         <label className="field"><span>(선택) 이미 구상 중인 내용이 있다면 자유롭게 적어 주세요</span><textarea value={s.memo} placeholder={ex.memo} onChange={e => up({ memo: e.target.value })} /></label>
+        <ExagNote text={`${s.name}\n${s.desc}\n${s.memo}`} />
         {warn && <div className="alert warning">{warn}</div>}
         <div className="btn-gap">
           <button className="btn primary" onClick={() => (!s.name.trim() || !s.desc.trim() ? setWarn("이름과 한 줄 설명을 적어 주세요.") : up({ step: 2 }))}>시작하기</button>
@@ -274,6 +292,7 @@ export default function App() {
         {sc.pick === 0 && <label className="field"><span>노트에 적어 보세요 (&quot;모르겠어요&quot;도 괜찮아요)</span><textarea value={s.notes[i]} onChange={e => setNote(e.target.value)} /></label>}
         {sc.pick !== 0 && sc.note && <label className="field"><span>✏️ 노트에 한 줄 더 적기 (선택)</span><input value={s.notes[i]} placeholder="예: 그때 있었던 일, 떠오른 사람" onChange={e => setNote(e.target.value)} /></label>}
         {sc.pick !== 0 && !sc.note && detail && <label className="field"><span>✏️ 조금만 더: {detail} (선택, 한 줄)</span><input value={s.notes[i]} onChange={e => setNote(e.target.value)} /></label>}
+        <ExagNote text={note} />
         {warn && <div className="alert warning">{warn}</div>}
         {busy === "followup" && <div className="loading">조금 더 여쭤볼게요…</div>}
         <div className="btn-row">
@@ -334,6 +353,7 @@ export default function App() {
           <div className="box"><Md text={s.reflect.replace(/^#{1,3}[^\n]*이런 뜻이에요[^\n]*\n+/, "")} /></div>
           <div className="btn-gap"><button className="btn primary" onClick={() => up({ step: 5 })}>맞아요</button></div>
           <label className="field"><span>조금 달라요 — 고칠 내용을 적어 주세요</span><textarea value={s.fix ?? ""} onChange={e => up({ fix: e.target.value })} /></label>
+          <ExagNote text={s.fix ?? ""} />
           <div className="btn-gap"><button className="btn" onClick={() => s.fix?.trim() && up({ reflect: undefined })}>이 내용으로 다시 정리</button></div>
         </>
       )}
@@ -453,6 +473,14 @@ export default function App() {
           </div>
           <div className="detail-panel">{detailBody(sel, labels[sel])}</div>
         </div>
+        {(() => {
+          // 결과 글(값·안·포인트·예문)만 검사. 이유·인용은 사용자 말을 옮긴 것이라 제외
+          const resultText = Object.values(s.sheet!).flatMap(it => [...asList(it?.value), ...asList(it?.options), ...asList(it?.points), it?.example ?? ""]).map(String).join("\n");
+          const before = findExaggeration(userText(s)).length, left = findExaggeration(resultText);
+          return left.length
+            ? <ExagNote text={resultText} title={`과장 표현 점검: 내가 쓴 글 ${before}개 → 결과에 ${left.length}개 남아 있어요`} />
+            : <div className="alert success">과장 표현 점검: 내가 쓴 글에서 {before}개 → 결과에 남은 것 0개 ✅</div>;
+        })()}
         <p className="caption">근거 확인: AI가 인용한 내 답 {quotes.length}개 중 {quotes.length - bad.length}개가 입력과 그대로 일치해요.
           {bad.length > 0 && ` 일치하지 않는 인용: ${bad.join(" / ")}.`} AI가 만든 글이니 사실과 다른 부분이 없는지 직접 확인해 주세요.</p>
         <div className="btn-row">
@@ -500,6 +528,7 @@ export default function App() {
               return body ? <div key={i}><b>{title.trim()}</b>
                 <div className="codebox">{body}<button className="btn sm" onClick={() => { navigator.clipboard?.writeText(body); setCopied(i); }}>{copied === i ? "복사됨" : "복사"}</button></div></div> : null;
             })}
+            <ExagNote text={text} title="이 문구에 과장으로 보일 수 있는 표현이 있어요" />
             <p className="caption">AI가 리포트를 바탕으로 쓴 초안이에요. 사실과 다르거나 과장된 표현이 없는지 확인한 뒤 써 주세요.</p>
           </>}
         </>}
