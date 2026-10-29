@@ -39,7 +39,7 @@ export async function POST(req: Request) {
   let name: PromptName, s: St, extra: Record<string, string>;
   try {
     ({ name, state: s, extra = {} } = JSON.parse(body));
-    if (!(name in PROMPTS) || !s || !Array.isArray(s.answers)) throw new Error("bad request");
+    if (!(name in PROMPTS) || !s || !Array.isArray(s.answers) || (s.notes != null && !Array.isArray(s.notes))) throw new Error("bad request");
     extra = Object.fromEntries(Object.entries(extra).map(([k, v]) => [k, String(v).slice(0, 8000)]));
   } catch {
     return Response.json({ error: "요청 형식이 맞지 않아요." }, { status: 400 });

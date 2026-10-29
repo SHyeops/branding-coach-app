@@ -25,7 +25,7 @@ const ICONS: Record<string, string> = {
 
 /** AI 호출 (서버 /api/ai). 실패해도 화면이 멈추지 않게 [결과, 오류문구] */
 async function askAI(name: PromptName, s: St, extra: Record<string, string> = {}): Promise<[string | null, string | null]> {
-  const state = { step: s.step, kind: s.kind, name: s.name, desc: s.desc, memo: s.memo, answers: s.answers, picks: s.picks, traits: s.traits, tone: s.tone, fix: s.fix };
+  const state = { step: s.step, kind: s.kind, name: s.name, desc: s.desc, memo: s.memo, answers: s.answers, picks: s.picks, notes: s.notes, traits: s.traits, tone: s.tone, fix: s.fix };
   try {
     const r = await fetch("/api/ai", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, state, extra }) });
     const j = await r.json();

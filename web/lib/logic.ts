@@ -162,4 +162,4 @@ export function findExaggeration(text: string): Exag[] {
 }
 
 /** 사용자가 직접 쓴 글 전체 (이름·설명·메모·장면 메모) */
-export const userText = (s: St) => [s.name, s.desc, s.memo, ...s.notes, s.fix ?? ""].join("\n");
+export const userText = (s: St) => [s.name, s.desc, s.memo, ...(s.notes ?? []), s.fix ?? ""].join("\n");
