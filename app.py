@@ -1,11 +1,14 @@
-"""I'm find (가칭) — 질문으로 찾는 내 브랜드. 단계: 0 홈 → 1 기본 정보 → 2 진단 질문 → 3 성향 찾기 → 4 되비추기 → 5 리포트"""
+"""From Your Garage — 질문으로 찾는 내 브랜드. 단계: 0 홈 → 1 기본 정보 → 2 진단 질문 → 3 성향 찾기 → 4 되비추기 → 5 리포트"""
 import os
+from pathlib import Path
 
 import streamlit as st
 from dotenv import load_dotenv
 from openai import OpenAI
 
 # 진단 질문 6개 = 3묶음(왜 / 누구에게 / 무엇이 다른가) × 2
+APP_NAME = "From Your Garage"
+
 QUESTIONS = {
     "상품": ["이 상품에 관심을 갖게 된 계기나 이유는 무엇인가요?", "이 상품으로 이루고 싶은 것은 무엇인가요?",
             "누구에게 가장 도움이 되길 바라나요?", "그 사람은 지금 어떤 점이 불편하거나 아쉬울까요?",
@@ -84,7 +87,8 @@ def ask_ai(template, **extra):
         return None, "AI 연결에 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요."
 
 
-st.set_page_config(page_title="I'm find — 질문으로 찾는 내 브랜드")
+st.set_page_config(page_title=f"{APP_NAME} — 질문으로 찾는 내 브랜드")
+st.markdown(f"<style>{(Path(__file__).parent / 'style.css').read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
 s = st.session_state
 s.setdefault("step", 0)
 s.setdefault("q", 0)          # 현재 질문 번호 (0~N-1)
@@ -98,12 +102,24 @@ def go(step):
     st.rerun()
 
 
+STEPS = ["기본 정보", "진단", "성향", "확인", "리포트"]
+if s.step > 0:  # 상단 단계 표시
+    cells = "".join(f'<div class="{"now" if k == s.step else "done" if k < s.step else ""}">{k}. {name}</div>'
+                    for k, name in enumerate(STEPS, 1))
+    st.markdown(f'<div class="stepper">{cells}</div>', unsafe_allow_html=True)
+
+
 if s.step == 0:
-    st.title("I'm find")
-    st.caption("질문으로 찾는 내 브랜드")
-    st.subheader("세상엔 수많은 브랜드가 있어요.\n아마존도, 구글도 작은 차고에서 시작했죠.\n당신의 브랜드도 여기서 시작되길 바라요.")
-    st.write("질문에 답하다 보면 \"내가 원래 생각하던 게 이거였구나\"를 찾아 정리해 드려요.")
-    st.markdown("**이렇게 진행돼요 (약 15분)**\n1. 진단 질문 6개에 답하기\n2. 보기 중에 골라 내 브랜드 성향 찾기\n3. 제가 이해한 내용이 맞는지 확인\n4. 브랜드 리포트 받기")
+    st.markdown(f"""<div class="hero"><div class="shutter" aria-hidden="true"></div>
+<span class="eyebrow">{APP_NAME.upper()} · 질문으로 찾는 내 브랜드</span>
+<div class="hero-title" role="heading" aria-level="1"><span>세상엔 수많은 브랜드가 있어요.</span><span>아마존도, 구글도 작은 차고에서 시작했죠.</span><span>당신의 브랜드도 여기서 시작되길 바라요.</span></div>
+<p class="hero-sub">질문에 답하다 보면 "내가 원래 생각하던 게 이거였구나"를 찾아 정리해 드려요. 약 15분이면 충분해요.</p>
+<div class="hero-line"></div></div>
+<div class="steps">
+<div class="step-card"><b>STEP 1</b>진단 질문 6개에 답하기</div>
+<div class="step-card"><b>STEP 2</b>보기 중에 골라 내 브랜드 성향 찾기</div>
+<div class="step-card"><b>STEP 3</b>제가 이해한 내용이 맞는지 확인</div>
+<div class="step-card"><b>STEP 4</b>브랜드 리포트 받기</div></div>""", unsafe_allow_html=True)
     st.caption("미리 생각해 두면 좋아요: 관심을 갖게 된 계기 · 도와주고 싶은 사람 · 다르게 하고 싶은 점 (잘 몰라도 괜찮아요)")
     if st.button("준비됐어요, 시작할게요", type="primary"):
         go(1)
@@ -203,7 +219,7 @@ else:
             st.rerun()
     else:
         tab_brief, tab_mentor = st.tabs(["정리본", "1:1 멘토링"])
-        with tab_brief:
+        with tab_brief, st.container(border=True):
             st.markdown(s.brief)
             st.caption("AI가 만든 글이에요. 사실과 다른 부분이 없는지 직접 확인해 주세요.")
         with tab_mentor:

@@ -1,0 +1,7 @@
+# Tracebit 디자인 토큰 기반 (20261029_tracebit_v1.md)
+[theme]
+base = "light"
+primaryColor = "#bc4725"
+backgroundColor = "#ffffff"
+secondaryBackgroundColor = "#f3efec"
+textColor = "#231f20"
