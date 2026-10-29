@@ -1,4 +1,4 @@
-"""브랜드 첫 단추 — 화면 이동 뼈대 (AI 연결 전). 단계: 0 홈 → 1 시작 → 2 질문 → 3 되비추기 → 4 정리본"""
+"""I'm find (가칭) — 질문으로 찾는 내 브랜드. 단계: 0 홈 → 1 시작 → 2 질문 → 3 되비추기 → 4 정리본"""
 import os
 
 import streamlit as st
@@ -53,7 +53,7 @@ def ask_ai(template, **extra):
         return None, "AI 연결에 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요."
 
 
-st.set_page_config(page_title="브랜드 첫 단추")
+st.set_page_config(page_title="I'm find — 질문으로 찾는 내 브랜드")
 s = st.session_state
 s.setdefault("step", 0)
 s.setdefault("q", 0)          # 현재 질문 번호 (0~2)
@@ -68,7 +68,8 @@ def go(step):
 
 
 if s.step == 0:
-    st.title("브랜드 첫 단추")
+    st.title("I'm find")
+    st.caption("질문으로 찾는 내 브랜드")
     st.write("질문에 답하다 보면 \"내가 원래 생각하던 게 이거였구나\"를 찾아 정리해 드려요.")
     st.markdown("**이렇게 진행돼요**\n1. 질문 3개에 답하기\n2. 제가 이해한 내용이 맞는지 확인\n3. 브랜드 정리 카드 받기")
     st.caption("미리 생각해 두면 좋아요: 시작한 이유 · 도와주고 싶은 사람 · 나만 하는 것 (잘 몰라도 괜찮아요)")
