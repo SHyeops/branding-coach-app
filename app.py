@@ -89,8 +89,27 @@ def info_text():
     return out + (f"\n사용자 수정 요청: {fix}" if fix else "")
 
 
+def fake_ai(template):
+    """테스트 모드(.env에 FAKE_AI="1"): API를 부르지 않고 예시 답을 돌려줌 → 화면 흐름 확인에 돈이 안 듦"""
+    a = s.answers[0] or s.name
+    if template is COLORS:
+        return json.dumps({"palettes": [
+            {"name": "테스트 1안", "colors": [{"hex": "#A94F3F", "role": "메인"}, {"hex": "#F3E6CF", "role": "보조"}, {"hex": "#687A4D", "role": "강조"}],
+             "why": "(테스트 모드 예시) 고른 성향에 맞춘 조합이에요.", "quote": a},
+            {"name": "테스트 2안", "colors": [{"hex": "#6B4937", "role": "메인"}, {"hex": "#F6F0E4", "role": "보조"}, {"hex": "#D9A441", "role": "강조"}],
+             "why": "(테스트 모드 예시) 두 번째 조합이에요.", "quote": a}]}, ensure_ascii=False)
+    if template is BRIEF:
+        return (f"### 미션\n**결과:** (테스트 모드 예시) {s.name}의 미션\n**이유:** 예시 이유\n**근거가 된 내 답:** 「{a}」\n"
+                "**쓸 때 팁:** 예시 팁\n\n### 핵심 메시지\n**결과:** 아직 정해지지 않았어요. (채우려면: 손님이 꼭 기억했으면 하는 한 가지는?)")
+    if template is REFLECT:
+        return f"(테스트 모드 예시) 말씀하신 건 이런 뜻이에요.\n- **왜:** {a}\n- **고른 성향:** {', '.join(s.get('traits', []))}"
+    return "(테스트 모드 예시) 조금 더 들려주세요. 예를 들면 그때 어떤 상황이었는지, 누가 떠올랐는지요."
+
+
 def ask_ai(template, **extra):
     """실패해도 앱이 멈추지 않게 (결과, 오류문구)를 돌려준다."""
+    if os.environ.get("FAKE_AI") == "1":
+        return fake_ai(template), None
     model = os.environ.get("OPENAI_MODEL")
     if not model:
         return None, "모델 설정(OPENAI_MODEL)이 없어요. .env 또는 Secrets를 확인해 주세요."
@@ -130,6 +149,8 @@ def show_palette(p):
 
 st.set_page_config(page_title=f"{APP_NAME} — 질문으로 찾는 내 브랜드")
 st.markdown(f"<style>{(Path(__file__).parent / 'style.css').read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
+if os.environ.get("FAKE_AI") == "1":
+    st.warning("테스트 모드: AI를 부르지 않고 예시 답을 보여줘요 (비용 0원). 끄려면 .env에서 FAKE_AI를 지우세요.")
 s = st.session_state
 s.setdefault("step", 0)
 s.setdefault("q", 0)          # 현재 질문 번호 (0~N-1)
