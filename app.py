@@ -1,14 +1,18 @@
-"""From Your Garage — 질문으로 찾는 내 브랜드. 단계: 0 홈 → 1 기본 정보 → 2 진단 질문 → 3 성향 찾기 → 4 되비추기 → 5 리포트"""
+"""From Your Garage — 질문으로 찾는 내 브랜드. 메뉴: 활용 템플릿 / 1:1 멘토링 / 브랜드 코칭(단계: 0 홈 → 1 기본 정보 → 2 진단 질문 → 3 성향 찾기 → 4 되비추기 → 5 리포트) / 브랜드 스토리"""
 import base64
 import html
 import json
 import os
 import re
 from pathlib import Path
+from urllib.parse import quote
 
 import streamlit as st
 from dotenv import load_dotenv
 from openai import OpenAI
+
+from brands import BRANDS, MARQUEE
+from mentors import MENTORS
 
 # 진단 질문 6개 = 3묶음(왜 / 누구에게 / 무엇이 다른가) × 2
 APP_NAME = "From Your Garage"
@@ -74,6 +78,24 @@ COLORS = """아래 사용자 정보(특히 고른 성향)에 어울리는 브랜
 {rules}
 
 {info}"""
+# 활용 템플릿: 리포트를 채널별로 바로 붙여 쓸 문구로 (채널은 기획서 3-1 시작 플랫폼 목록 안에서)
+TEMPLATE = """아래 [사용자 정보]와 [브랜드 리포트]를 바탕으로 {channel}에 바로 붙여 쓸 문구를 만들어줘.
+만들 것: {items}
+각 항목은 "### 항목 이름" 한 줄로 시작하고, 그 아래에는 붙여 쓸 문구만 쓴다 (설명·따옴표 없이).
+리포트의 성격·말투와 핵심 메시지를 따른다. 리포트에서 "아직 정해지지 않았어요"인 내용은 지어내지 않고 빼고 쓴다.
+{rules}
+
+[브랜드 리포트]
+{brief}
+
+{info}"""
+CHANNELS = {
+    "인스타그램": "프로필 소개 (150자 이내, 줄바꿈 2~3줄) / 첫 게시물 캡션 (브랜드 소개, 해시태그 5개 포함)",
+    "스레드": "첫 글 (이 브랜드를 시작한 이야기, 말하듯 편하게, 500자 이내)",
+    "스마트스토어": "상품명 (검색할 만한 낱말을 앞쪽에, 짧게) / 상세페이지 첫 문단 (3~4문장)",
+    "네이버 블로그": "첫 글 제목 3안 / 첫 글 도입 문단 (4~5문장)",
+    "당근 비즈프로필": "가게 소개 (동네 이웃에게 말하듯, 3~4문장) / 첫 소식 글 (인사 + 소개)",
+}
 FOLLOWUP = """사용자가 아래 질문에 너무 짧게 답했다. 답을 더 구체적으로 이끌어낼 추가 질문 1개를 쉬운 말로 만들어줘.
 질문에는 사용자가 말하지 않은 사실을 넣지 말고, 떠올리기 쉽도록 "예를 들면 …" 식의 열린 예시 2개를 덧붙인다. 질문만 출력한다.
 질문: {question}
@@ -102,6 +124,8 @@ def fake_ai(template):
     if template is BRIEF:
         return (f"### 미션\n**결과:** (테스트 모드 예시) {s.name}의 미션\n**이유:** 예시 이유\n**근거가 된 내 답:** 「{a}」\n"
                 "**쓸 때 팁:** 예시 팁\n\n### 핵심 메시지\n**결과:** 아직 정해지지 않았어요. (채우려면: 손님이 꼭 기억했으면 하는 한 가지는?)")
+    if template is TEMPLATE:
+        return f"### 예시 항목 1\n(테스트 모드 예시) {s.name} 문구예요.\n두 번째 줄이에요.\n\n### 예시 항목 2\n(테스트 모드 예시) {a}"
     if template is REFLECT:
         return f"(테스트 모드 예시) 말씀하신 건 이런 뜻이에요.\n- **왜:** {a}\n- **고른 성향:** {', '.join(s.get('traits', []))}"
     return "(테스트 모드 예시) 조금 더 들려주세요. 예를 들면 그때 어떤 상황이었는지, 누가 떠올랐는지요."
@@ -165,22 +189,120 @@ def go(step):
     st.rerun()
 
 
+def svg_b64(name):
+    return base64.b64encode((Path(__file__).parent / "assets" / f"{name}.svg").read_bytes()).decode()
+
+
 def logo(name, alt):
-    """assets/의 공식 로고(위키미디어 공용 SVG)를 글 안에 이미지로 넣음"""
-    data = base64.b64encode((Path(__file__).parent / "assets" / f"{name}.svg").read_bytes()).decode()
-    return f'<img class="logo logo-{name}" alt="{alt}" src="data:image/svg+xml;base64,{data}">'
+    """assets/의 로고 SVG(위키미디어 공용·simple-icons)를 글 안에 이미지로 넣음"""
+    return f'<img class="logo logo-{Path(name).name}" alt="{alt}" src="data:image/svg+xml;base64,{svg_b64(name)}">'
+
+
+@st.dialog("브랜드 브리프", width="large")
+def brand_modal(b):
+    st.markdown(f'<div class="bm-head"><span class="bm-logo">{logo("brands/" + b["logo"], b["en"])}</span><div><div class="bm-name">{b["name"]} <small>{b["en"]}</small></div>'
+                f'<div class="bm-meta">{b["since"]} · {b["founder"]}</div></div></div>'
+                f'<div class="bm-msg">“{b["message"]}”<small>{"대표 문구" if b["official"] else "핵심 생각 (공식 문구 아님, 요약)"}</small></div>'
+                f'<div class="bm-tags">{"".join(f"<span>#{k}</span>" for k in b["keywords"])}</div>', unsafe_allow_html=True)
+    sentences = re.split(r"(?<=[.!?])\s+", b["story"])  # 큰 화면에서 한두 줄로 뭉쳐 보이지 않게 문장마다 줄바꿈
+    st.markdown("**시작 이야기**  \n" + "  \n".join(sentences))
+    st.info(f'**작은 브랜드가 배울 점** {b["lesson"]}')
+    if b["photos"]:
+        for col, (file, cap, lic) in zip(st.columns(len(b["photos"])), b["photos"]):
+            col.image(f"https://commons.wikimedia.org/wiki/Special:FilePath/{quote(file)}?width=900", caption=f"{cap} · 위키미디어 공용({lic})", width="stretch")
+    st.markdown(f'[위키백과에서 더 보기]({b["wiki"]})')
+
+
+def show_stories():
+    # 카드 버튼마다 로고를 배경으로 넣음 (Streamlit 버튼엔 이미지를 직접 못 넣음)
+    css = "".join(f'.st-key-brand_{b["logo"]} button::before {{ background-image: url(data:image/svg+xml;base64,{svg_b64("brands/" + b["logo"])}); }}'
+                  for b in BRANDS)
+    st.markdown(f'<style>{css}</style><div class="hero story-hero"><span class="eyebrow">BRAND STORIES</span><div class="page-title">작은 곳에서 시작한 브랜드들</div>'
+                '<p class="hero-sub">로고를 누르면 브랜드 브리프와 시작 이야기를 볼 수 있어요.</p></div>', unsafe_allow_html=True)
+    for i in range(0, len(BRANDS), 5):
+        for col, b in zip(st.columns(5), BRANDS[i:i + 5]):
+            if col.button(f'{b["name"]}  \n{b["en"]}', key=f'brand_{b["logo"]}', use_container_width=True):
+                brand_modal(b)
+
+
+def show_templates():
+    st.markdown('<div class="hero story-hero"><span class="eyebrow">TEMPLATES</span><div class="page-title">리포트를 바로 쓰는 문구로</div>'
+                '<p class="hero-sub">채널을 고르면 내 브랜드 리포트를 그 채널에 맞는 문구로 바꿔 드려요. 복사 버튼으로 바로 붙여 넣으세요.</p></div>',
+                unsafe_allow_html=True)
+    if not s.get("brief"):
+        st.info("브랜드 코칭을 마치고 리포트를 받으면, 여기서 채널별 문구를 바로 만들 수 있어요.")
+        st.markdown("".join(f'<div class="ch-row"><b>{ch}</b><span>{items}</span></div>' for ch, items in CHANNELS.items()), unsafe_allow_html=True)
+        st.button("브랜드 코칭 시작하기", type="primary", on_click=lambda: s.update(page="브랜드 코칭"))
+        return
+    ch = st.pills("채널", list(CHANNELS), default="인스타그램", key="channel")
+    if not ch:
+        return
+    tpl = s.setdefault("tpl", {})  # 채널별로 한 번 만든 결과는 저장 (다시 누르면 새로 만듦)
+    if st.button("이 채널 문구 만들기" if ch not in tpl else "다시 만들기", type="primary"):
+        with st.spinner(f"{ch}에 맞게 쓰고 있어요…"):
+            text, err = ask_ai(TEMPLATE, channel=ch, items=CHANNELS[ch], brief=s.brief)
+        if err:
+            st.error(err)
+        else:
+            tpl[ch] = text
+    if ch in tpl:
+        for block in re.split(r"^###\s*", tpl[ch], flags=re.M):
+            title, _, body = block.strip().partition("\n")
+            if body.strip():
+                st.markdown(f"**{title.strip()}**")
+                st.code(body.strip(), language=None, wrap_lines=True)
+        st.caption("AI가 리포트를 바탕으로 쓴 초안이에요. 사실과 다르거나 과장된 표현이 없는지 확인한 뒤 써 주세요.")
+
+
+def mentor_head(m):
+    return (f'<div class="mt-head"><img class="mt-ava" alt="" src="data:image/svg+xml;base64,{svg_b64("mentors/" + m["avatar"])}">'
+            f'<div><div class="mt-name">{m["name"]}</div><div class="mt-role">{m["role"]} · {m["years"]}년차</div></div></div>'
+            f'<div class="bm-tags">{"".join(f"<span>#{k}</span>" for k in m["tags"])}</div>')
+
+
+@st.dialog("멘토 프로필", width="large")
+def mentor_modal(m):
+    st.markdown(mentor_head(m), unsafe_allow_html=True)
+    st.caption("멘토가 직접 작성한 소개예요")
+    st.markdown(m["intro"])
+    st.markdown("**제가 함께할 수 있는 것**  \n" + "  \n".join(f"· {c}" for c in m["can"]))
+    st.markdown("**걸어온 길**  \n" + "  \n".join(f"· {c}" for c in m["career"]))
+    st.markdown(f'**이런 분을 만나고 싶어요**  \n{m["for"]}')
+    if st.button("첫 1회 무료로 신청하기", type="primary", key="apply"):
+        st.success(f'{m["name"]} 멘토에게 신청했어요. (테스트 화면이라 실제로 전송되지는 않아요)')
+
+
+def show_mentors():
+    st.markdown('<div class="hero story-hero"><span class="eyebrow">1:1 MENTORING</span><div class="page-title">내 브랜드, 전문가와 한 번 더</div>'
+                '<p class="hero-sub">리포트를 들고 분야별 멘토와 60분 동안 이야기해요. 마음에 드는 멘토를 눌러 프로필을 보세요.</p></div>'
+                '<div class="free-banner"><b>첫 1:1 멘토링 1회 무료</b><span>모든 멘토 공통 · 60분</span></div>',
+                unsafe_allow_html=True)
+    for i in range(0, len(MENTORS), 3):
+        for col, m in zip(st.columns(3), MENTORS[i:i + 3]):
+            with col.container(border=True):
+                st.markdown(mentor_head(m) + f'<p class="mt-intro">{m["intro"]}</p>', unsafe_allow_html=True)
+                if st.button("프로필 보기", key=f'mentor_{m["avatar"]}', use_container_width=True):
+                    mentor_modal(m)
+    st.caption("※ 소개된 멘토는 서비스 예시를 위한 가상 인물이에요.")
 
 
 # 단계 아이콘 (선 아이콘, 색은 CSS에서)
 _svg = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{}</svg>'
 ICONS = {
-    "진단": _svg.format('<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9.6 9.4a2.4 2.4 0 1 1 3.4 2.2c-.6.3-1 .8-1 1.5"/><path d="M12 16.3v.1"/>'),
+    "진단": _svg.format('<path d="M4 4h10a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2H9l-4 3v-3H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"/>'
+                        '<path d="M18 8h2a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-1v3l-4-3h-3a2 2 0 0 1-2-2v-1"/>'
+                        '<path d="M7.6 7.2a1.5 1.5 0 1 1 2.1 1.4c-.5.2-.7.6-.7 1.1M9 11.3v.1"/>'),
     "성향": _svg.format('<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>'),
     "확인": _svg.format('<circle cx="12" cy="12" r="9"/><path d="m8 12.2 2.8 2.8L16 9.5"/>'),
     "리포트": _svg.format('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>'),
 }
-HOME_STEPS = [("진단", "진단 질문 6개에 답하기"), ("성향", "보기 중에 골라 내 브랜드 성향 찾기"),
-              ("확인", "제가 이해한 내용이 맞는지 확인"), ("리포트", "브랜드 리포트 받기")]
+HOME_STEPS = [("진단", "질문 6개 답하기"), ("성향", "성향 고르기"), ("확인", "내용 확인"), ("리포트", "리포트 받기")]
+
+PAGES = {"브랜드 코칭": None, "활용 템플릿": show_templates, "브랜드 스토리": show_stories, "1:1 멘토링": show_mentors}
+page = st.segmented_control("메뉴", list(PAGES), default="브랜드 코칭", key="page", label_visibility="collapsed")
+if PAGES.get(page):
+    PAGES[page]()
+    st.stop()
 
 STEPS = ["기본 정보", "진단", "성향", "확인", "리포트"]
 if s.step > 0:  # 상단 단계 표시
@@ -190,15 +312,22 @@ if s.step > 0:  # 상단 단계 표시
 
 
 if s.step == 0:
-    st.markdown(f"""<div class="intro" aria-hidden="true"><div class="mq"><span class="g"><span class="pre">FROM YOUR&nbsp;</span>GARAGE</span></div></div>
+    # 인트로는 처음 한 번만 (메뉴를 오가도 다시 안 나오게)
+    seen = s.get("intro_seen", False)
+    s.intro_seen = True
+    intro = "" if seen else '<div class="intro" aria-hidden="true"><div class="mq"><span class="g"><span class="pre">FROM YOUR&nbsp;</span>GARAGE</span></div></div>'
+    marquee = "".join(f'<div class="lb-row{" rev" if i else ""}"><div class="lb-track">{"".join(logo("brands/" + n, "") for n in row * 2)}</div></div>'
+                      for i, row in enumerate(MARQUEE))
+    st.markdown(f"""<div class="home{" seen" if seen else ""}">{intro}
 <div class="hero"><span class="eyebrow">질문으로 찾는 내 브랜드</span>
-<div class="brand-title" role="heading" aria-level="1">From Your <em>Garage</em></div>
-<div class="hero-copy"><span>세상엔 수많은 브랜드가 있어요.</span><span>{logo("amazon", "아마존")}도, {logo("google", "구글")}도 작은 차고에서 시작했죠.</span><span>당신의 브랜드도 여기서 시작되길 바라요.</span></div>
-<p class="hero-sub">질문에 답하다 보면 "내가 원래 생각하던 게 이거였구나"를 찾아 정리해 드려요. 약 15분이면 충분해요.</p></div>
-<div class="steps">{"".join(f'<div class="step-card">{ICONS[k]}<b>STEP {n}</b>{text}</div>' for n, (k, text) in enumerate(HOME_STEPS, 1))}</div>""",
+<div class="brand-title" role="heading" aria-level="1"><span class="by">From Your</span> <em>GARAGE</em></div>
+<div class="hero-copy"><span>세상엔 수많은 브랜드가 있어요.</span><span>{logo("amazon_white", "아마존")}도, {logo("google", "구글")}도 작은 차고에서 시작했죠.</span><span>당신의 브랜드도 여기서 시작되길 바라요.</span></div>
+<p class="hero-sub">질문에 답하다 보면 "내가 원래 생각하던 게 이거였구나"를 찾아 정리해 드려요.<br><span class="time-chip">약 15분</span>이면 충분해요.</p></div>
+<div class="logo-band" aria-hidden="true">{marquee}</div>
+<div class="steps">{"".join(f'<div class="step-card"><b>STEP {n}</b>{text}{ICONS[k]}</div>' for n, (k, text) in enumerate(HOME_STEPS, 1))}</div></div>""",
                 unsafe_allow_html=True)
     st.caption("미리 생각해 두면 좋아요: 관심을 갖게 된 계기 · 도와주고 싶은 사람 · 다르게 하고 싶은 점 (잘 몰라도 괜찮아요)")
-    if st.button("준비됐어요, 시작할게요", type="primary"):
+    if st.button("준비됐어요, 시작할게요", type="primary", key="start"):
         go(1)
 
 elif s.step == 1:
@@ -304,6 +433,7 @@ else:
                 st.caption(f"근거 확인: AI가 인용한 내 답 {len(quotes)}개 중 {len(quotes) - len(bad)}개가 입력과 그대로 일치해요."
                            + (f" 일치하지 않는 인용: {' / '.join(bad)}." if bad else "")
                            + " AI가 만든 글이니 사실과 다른 부분이 없는지 직접 확인해 주세요.")
+            st.button("이 리포트로 채널별 문구 만들기", on_click=lambda: s.update(page="활용 템플릿"))
             if "palettes" not in s:
                 with st.spinner("어울리는 컬러를 고르고 있어요…"):
                     text, _ = ask_ai(COLORS)
@@ -325,9 +455,8 @@ else:
                         st.rerun()
         with tab_mentor:
             st.subheader("우리 업계 이야기를 더 자세히 듣고 싶다면")
-            st.write("정리본을 가지고 해당 업계 현직자와 1:1로 이야기해 보는 멘토링이에요. (유료)")
-            st.info("아직 준비 중인 기능이에요. 곧 만나요!")
-            st.button("멘토링 신청하기", disabled=True)
+            st.write("정리본을 가지고 분야별 멘토와 1:1로 이야기해 보는 멘토링이에요. 첫 1회는 무료예요.")
+            st.button("멘토 둘러보기", on_click=lambda: s.update(page="1:1 멘토링"))
     if st.button("처음부터 다시"):
         s.clear()
         st.rerun()
