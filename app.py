@@ -1,4 +1,5 @@
 """From Your Garage — 질문으로 찾는 내 브랜드. 단계: 0 홈 → 1 기본 정보 → 2 진단 질문 → 3 성향 찾기 → 4 되비추기 → 5 리포트"""
+import base64
 import html
 import json
 import os
@@ -164,6 +165,23 @@ def go(step):
     st.rerun()
 
 
+def logo(name, alt):
+    """assets/의 공식 로고(위키미디어 공용 SVG)를 글 안에 이미지로 넣음"""
+    data = base64.b64encode((Path(__file__).parent / "assets" / f"{name}.svg").read_bytes()).decode()
+    return f'<img class="logo logo-{name}" alt="{alt}" src="data:image/svg+xml;base64,{data}">'
+
+
+# 단계 아이콘 (선 아이콘, 색은 CSS에서)
+_svg = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">{}</svg>'
+ICONS = {
+    "진단": _svg.format('<path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M9.6 9.4a2.4 2.4 0 1 1 3.4 2.2c-.6.3-1 .8-1 1.5"/><path d="M12 16.3v.1"/>'),
+    "성향": _svg.format('<path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/>'),
+    "확인": _svg.format('<circle cx="12" cy="12" r="9"/><path d="m8 12.2 2.8 2.8L16 9.5"/>'),
+    "리포트": _svg.format('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>'),
+}
+HOME_STEPS = [("진단", "진단 질문 6개에 답하기"), ("성향", "보기 중에 골라 내 브랜드 성향 찾기"),
+              ("확인", "제가 이해한 내용이 맞는지 확인"), ("리포트", "브랜드 리포트 받기")]
+
 STEPS = ["기본 정보", "진단", "성향", "확인", "리포트"]
 if s.step > 0:  # 상단 단계 표시
     cells = "".join(f'<div class="{"now" if k == s.step else "done" if k < s.step else ""}">{k}. {name}</div>'
@@ -172,16 +190,13 @@ if s.step > 0:  # 상단 단계 표시
 
 
 if s.step == 0:
-    st.markdown(f"""<div class="hero"><div class="shutter" aria-hidden="true"></div>
-<span class="eyebrow">{APP_NAME.upper()} · 질문으로 찾는 내 브랜드</span>
-<div class="hero-title" role="heading" aria-level="1"><span>세상엔 수많은 브랜드가 있어요.</span><span>아마존도, 구글도 작은 차고에서 시작했죠.</span><span>당신의 브랜드도 여기서 시작되길 바라요.</span></div>
-<p class="hero-sub">질문에 답하다 보면 "내가 원래 생각하던 게 이거였구나"를 찾아 정리해 드려요. 약 15분이면 충분해요.</p>
-<div class="hero-line"></div></div>
-<div class="steps">
-<div class="step-card"><b>STEP 1</b>진단 질문 6개에 답하기</div>
-<div class="step-card"><b>STEP 2</b>보기 중에 골라 내 브랜드 성향 찾기</div>
-<div class="step-card"><b>STEP 3</b>제가 이해한 내용이 맞는지 확인</div>
-<div class="step-card"><b>STEP 4</b>브랜드 리포트 받기</div></div>""", unsafe_allow_html=True)
+    st.markdown(f"""<div class="intro" aria-hidden="true"><div class="mq"><span class="g"><span class="pre">FROM YOUR&nbsp;</span>GARAGE</span></div></div>
+<div class="hero"><span class="eyebrow">질문으로 찾는 내 브랜드</span>
+<div class="brand-title" role="heading" aria-level="1">From Your <em>Garage</em></div>
+<div class="hero-copy"><span>세상엔 수많은 브랜드가 있어요.</span><span>{logo("amazon", "아마존")}도, {logo("google", "구글")}도 작은 차고에서 시작했죠.</span><span>당신의 브랜드도 여기서 시작되길 바라요.</span></div>
+<p class="hero-sub">질문에 답하다 보면 "내가 원래 생각하던 게 이거였구나"를 찾아 정리해 드려요. 약 15분이면 충분해요.</p></div>
+<div class="steps">{"".join(f'<div class="step-card">{ICONS[k]}<b>STEP {n}</b>{text}</div>' for n, (k, text) in enumerate(HOME_STEPS, 1))}</div>""",
+                unsafe_allow_html=True)
     st.caption("미리 생각해 두면 좋아요: 관심을 갖게 된 계기 · 도와주고 싶은 사람 · 다르게 하고 싶은 점 (잘 몰라도 괜찮아요)")
     if st.button("준비됐어요, 시작할게요", type="primary"):
         go(1)
