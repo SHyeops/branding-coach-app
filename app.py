@@ -46,7 +46,8 @@ load_dotenv()
 # v2 프롬프트 (v1과 같은 모델·기본 설정, 시스템 메시지 없음 → 규칙은 요청문 안에 넣음)
 RULES = """규칙: 아래 [사용자 정보]에 있는 내용만 사용한다. 정보에 없는 사실(브랜드명, 판매처, 재료, 수치, 인증, 경력 등)은 절대 추가하지 않는다.
 모르는 부분은 지어내지 말고 "아직 정해지지 않았어요"라고 쓴다. 효능·성과를 단정하거나 과장하지 않는다. 쉬운 한국어로 쓴다."""
-REFLECT = """사용자가 답한 내용을 "말씀하신 건 이런 뜻이에요" 형태로, 묶음별(왜 / 누구에게 / 무엇이 다른가) 항목과 "고른 성향·말투" 항목으로 쉽게 정리해줘.
+REFLECT = """사용자가 답한 내용을 묶음별(왜 / 누구에게 / 무엇이 다른가) 항목과 "고른 성향·말투" 항목으로 쉽게 정리해줘.
+전체 제목(예: "말씀하신 건 이런 뜻이에요")은 쓰지 말고 "### 왜"처럼 묶음 제목부터 시작한다. 같은 맺음 표현("~이런 뜻이에요")을 반복하지 않는다.
 {rules}
 
 {info}"""
@@ -57,25 +58,31 @@ PLATFORMS = """농작물·식품: 네이버 스마트스토어, 쿠팡, 카카�
 동네 기반 서비스: 네이버 플레이스(예약), 당근 / 당근, 인스타그램
 레슨·코칭·전문 서비스: 숨고, 크몽 / 네이버 블로그, 유튜브, 인스타그램
 클래스·취미: 클래스 플랫폼(프립·탈잉·클래스101) / 인스타그램"""
-BRIEF = """아래 내용으로 브랜드 분석 리포트를 만들어줘. 항목: 미션 / 핵심 가치 3개 / 성격·말투 / 핵심 메시지 / 슬로건 3안 / 무드 키워드 / 시작하기.
-항목마다 아래 형식을 지킨다.
-### 항목 이름
-**결과:** 내용
-**이유:** 왜 이렇게 정리했는지 1~2문장
-**근거가 된 내 답:** 사용자 정보의 문장을 「」 안에 한 글자도 바꾸지 말고 그대로 옮긴다 (1~2개). 단 앞에 붙은 "고른 것:", "내가 쓴 말:" 같은 꼬리표는 빼고 내용만 옮긴다
-**쓸 때 팁:** 상세페이지·SNS·간판 등 어디에 어떻게 쓰면 좋은지 1문장
-미션과 핵심 메시지는 정답처럼 하나로 정하지 말고, **결과:** 아래에 "1안: …" 줄과 "2안: …" 줄로 서로 다른 방향 2개를 쓴다.
-시작하기는 아래 [시작 채널 목록] 안에서만 1~2곳을 고르고, 이번 주에 바로 할 수 있는 작은 일 3가지를 쓴다. 수수료·조건은 말하지 않는다.
-사용자 정보의 "앱이 계산한 브랜드 유형"은 방향 참고용이다. 유형 이름을 근거로 새 사실을 만들지 않는다.
-정보가 부족해 채울 수 없는 항목(또는 항목의 일부)은 결과에 "아직 정해지지 않았어요. (채우려면: 사용자에게 던질 질문 1개)"라고 쓰고 근거는 비운다. 질문에는 새 사실을 넣지 않는다.
-같은 표현을 반복해 항목을 억지로 채우지 말고, 근거가 있는 것만 쓴다. 성격·말투는 사용자가 고른 성향과 말투 예시를 근거로 쓴다.
-무드 키워드는 고른 성향 낱말을 그대로 되풀이하지 말고, 사진·디자인에 바로 쓸 수 있는 색·소재·장면 낱말 5개로 쓴다 (근거는 고른 성향).
+# 리포트 = 브랜드 아이덴티티 시트: 고른 보기를 옮겨 적지 않고 엮어서 '최종 값' + 항목마다 자세한 이유(why)·근거(quotes)
+SHEET = """아래 [사용자 정보]로 '브랜드 아이덴티티 시트'를 만들어줘.
+고른 보기를 그대로 옮겨 적지 말고, 여러 선택과 사용자가 쓴 말을 엮어 하나의 결론(최종 값)으로 정리한다.
+반드시 JSON만 출력한다. 키: one_liner, customer, pain, mission, values, personality, message, slogans, strategy, mood, todo, advice
+각 키의 값 = {{"value": 값, "why": "왜 이렇게 나왔는지", "quotes": ["근거 문장", ...]}}
+- one_liner: 이 브랜드를 한 문장으로 정의 / customer: 주요 고객층을 한 사람처럼 그린 1문장 / pain: 그 고객의 고민 1문장
+- mission, message: value 대신 "options": [서로 다른 방향 2개] / slogans: "options": [3개]
+- values: value는 핵심 가치 3개 목록 / todo: value는 이번 주 바로 할 수 있는 작은 일 3개 목록
+- advice: value는 아직 비어 있거나 더 구체적이면 좋을 부분을 가볍게 짚는 조언 2~3개 목록 ("~을 정해 두면 ~가 쉬워져요"처럼 응원하는 말투, 꾸짖지 않기)
+- mood: value는 사진·디자인에 쓸 색·소재·장면 낱말 5개 목록 (고른 성향 낱말을 되풀이하지 않는다)
+- personality: value는 성격·말투 1문장, "example"에 이 말투로 쓴 손님 안내 문장 1개
+- strategy: value는 판매 전략 한 줄, "points"에 3개 [시작 채널(아래 목록 안에서만 1~2곳)과 이 브랜드에 맞는 이유 / 가격·차별점을 어떻게 보여 줄지 / 첫 손님을 어떻게 만날지]. 각 point는 짧은 1~2문장. 수수료·조건·숫자는 말하지 않는다.
+- why: 5~7문장으로 자세히 풀어 쓴다. 순서: ① 근거가 된 선택·말 ② 그것이 어떤 뜻으로 읽혔는지 ③ 다른 선택과 어떻게 이어졌는지 ④ 그래서 이 결론이 된 이유 ⑤ "만약 ~라고 생각한다면 ~쪽으로 바뀔 수 있어요"처럼 사용자가 스스로 판단할 여지 1문장. 단정하지 말고 "~로 읽혀요", "~에 가까워요"처럼 쓴다. "목록", "사용자 정보" 같은 내부 표현은 쓰지 않는다.
+- quotes: 근거가 된 사용자 정보 문장을 한 글자도 바꾸지 말고 1~3개 옮긴다. 앞에 붙은 "고른 것:", "내가 쓴 말:" 같은 꼬리표는 빼고 내용만 옮긴다.
+- 정보가 없어 채울 수 없으면 value(또는 options)에 "아직 정해지지 않았어요"라고 쓰고, why에 채우려면 생각해 볼 질문 1개를 쓴다.
+- 사용자 정보의 "앱이 계산한 브랜드 유형"은 방향 참고용이다. 유형 이름을 근거로 새 사실을 만들지 않는다.
 {rules}
 
 [시작 채널 목록] (판매 / 홍보)
 {platforms}
 
 {info}"""
+SHEET_LABELS = {"one_liner": "한 줄 정의", "customer": "주요 고객층", "pain": "고객의 고민", "mission": "미션", "values": "핵심 가치",
+                "personality": "성격·말투", "message": "핵심 메시지", "slogans": "슬로건", "strategy": "판매 전략", "mood": "무드 키워드",
+                "todo": "이번 주 할 일", "advice": "더 생각해 볼 것"}
 # 컬러는 사실이 아니라 제안 → 3안을 한 번에 받아 "다른 안 보기"로 넘김
 COLORS = """아래 사용자 정보(특히 고른 성향)에 어울리는 브랜드 컬러 조합 3안을 추천해줘. 안마다 색 3개(메인/보조/강조)를 고른다.
 반드시 JSON만 출력한다: {{"palettes": [{{"name": "조합 이름", "colors": [{{"hex": "#RRGGBB", "role": "메인"}}, ...], "why": "이 조합을 고른 이유 1~2문장", "quote": "근거가 된 사용자 정보 문장 1개를 한 글자도 바꾸지 않고 그대로 (앞의 '고른 것:' 같은 꼬리표는 빼고)"}}]}}
@@ -128,10 +135,16 @@ def fake_ai(template):
              "why": "(테스트 모드 예시) 고른 성향에 맞춘 조합이에요.", "quote": a},
             {"name": "테스트 2안", "colors": [{"hex": "#6B4937", "role": "메인"}, {"hex": "#F6F0E4", "role": "보조"}, {"hex": "#D9A441", "role": "강조"}],
              "why": "(테스트 모드 예시) 두 번째 조합이에요.", "quote": a}]}, ensure_ascii=False)
-    if template is BRIEF:
-        return (f"### 미션\n**결과:**\n1안: (테스트 모드 예시) {s.name}의 미션 A\n2안: (테스트 모드 예시) {s.name}의 미션 B\n**이유:** 예시 이유\n"
-                f"**근거가 된 내 답:** 「{a}」\n**쓸 때 팁:** 예시 팁\n\n### 핵심 메시지\n**결과:**\n1안: 예시 메시지 A\n2안: 예시 메시지 B\n\n"
-                "### 시작하기\n**결과:** 인스타그램 / 이번 주 할 일: 1) 프로필 만들기 2) 첫 글 올리기 3) 사진 10장 찍기")
+    if template is SHEET:
+        item = lambda v: {"value": v, "why": "(테스트 모드 예시) 이 선택이 이렇게 읽혀서 이런 결과가 나왔어요.", "quotes": [a]}
+        d = {k: item(f"(예시) {label}") for k, label in SHEET_LABELS.items()}
+        for k, n in [("mission", 2), ("message", 2), ("slogans", 3)]:
+            d[k] = {"options": [f"(예시) {SHEET_LABELS[k]} {j + 1}안" for j in range(n)], "why": "(테스트 모드 예시) 두 방향이에요.", "quotes": [a]}
+        for k in ("values", "mood", "todo", "advice"):
+            d[k]["value"] = [f"예시 {j + 1}" for j in range(3)]
+        d["personality"]["example"] = "오늘도 정성껏 준비했어요."
+        d["strategy"]["points"] = ["채널: 인스타그램", "가격: 예시", "첫 손님: 예시"]
+        return json.dumps(d, ensure_ascii=False)
     if template is TEMPLATE:
         return f"### 예시 항목 1\n(테스트 모드 예시) {s.name} 문구예요.\n두 번째 줄이에요.\n\n### 예시 항목 2\n(테스트 모드 예시) {a}"
     if template is REFLECT:
@@ -190,6 +203,12 @@ s.setdefault("q", 0)          # 현재 질문 번호 (0~N-1)
 s.setdefault("answers", [""] * N)  # AI에 넘기는 장면별 답 = "고른 것: … / 내가 쓴 말: …"
 s.setdefault("picks", [[] for _ in range(N)])  # 장면별 고른 보기
 s.setdefault("notes", [""] * N)               # 장면별 직접 쓴 한 줄
+# 예시 링크: ?demo=scenes(답이 다 채워진 첫 장면부터) / ?demo=report(결과 바로). 저장해 둔 실제 AI 결과를 써서 AI를 다시 부르지 않음
+DEMO = Path(__file__).parent / "results" / "v3" / "demo_P02.json"
+demo = st.query_params.get("demo")
+if demo in ("scenes", "report") and s.get("demo_loaded") != demo and DEMO.exists():
+    s.update(json.loads(DEMO.read_text(encoding="utf-8")))
+    s.update(step=5 if demo == "report" else 2, q=0, intro_seen=True, demo_loaded=demo)
 s.setdefault("asked_more", [False] * N)
 s.setdefault("more", [""] * N)
 
@@ -200,11 +219,15 @@ def bulbs(lit):
     return f'<div class="bulbs" aria-label="아이디어 {lit}/{total} 켜짐">{dots}<span>아이디어 {lit}/{total}</span></div>'
 
 
+POSTIT_COLORS = ["#fffdf7", "#ffd9e3", "#d4f1e4", "#d6e7ff", "#e7dcff", "#fff1c2"]  # 흰색 + 파스텔
+
+
 def wall(items, new=()):
-    """차고 벽: 브랜드 이름 + 지금까지 고른 생각을 포스트잇으로 (방금 고른 건 new)"""
+    """차고 벽(흰 페인트 벽돌): 브랜드 이름 + 지금까지 고른 생각을 포스트잇으로 (방금 고른 건 new)"""
     notes = [(s.name, "name")] + [(x, "") for x in items] + [(x, "new") for x in new]
-    return ('<div class="wall"><span class="wall-label">차고 벽</span>'
-            + "".join(f'<span class="postit {c}" style="--r:{(j * 37) % 7 - 3}deg">{html.escape(x)}</span>' for j, (x, c) in enumerate(notes))
+    return ('<div class="wall"><span class="wall-label">GARAGE WALL</span>'
+            + "".join(f'<span class="postit {c}" style="--r:{(j * 37) % 7 - 3}deg;--c:{POSTIT_COLORS[j % len(POSTIT_COLORS)]}">{html.escape(x)}</span>'
+                      for j, (x, c) in enumerate(notes))
             + "</div>")
 
 
@@ -216,10 +239,34 @@ def answer_text(chosen, note):
     return " / ".join(p for p in [f"고른 것: {', '.join(chosen)}" if chosen else "", f"내가 쓴 말: {note.strip()}" if note.strip() else ""] if p)
 
 
-def two_options(item):
-    """리포트에서 미션·핵심 메시지의 1안/2안을 꺼냄 (형식이 다르면 빈 목록 → 고르기 생략)"""
-    sec = re.search(rf"###\s*{item}\s*\n(.*?)(?=\n###|\Z)", s.brief, re.S)
-    return [o.strip() for o in re.findall(r"[12]안:\s*(.+)", sec.group(1))][:2] if sec else []
+def parse_sheet(text):
+    """AI 시트 JSON → dict. 키가 빠졌거나 형식이 틀리면 None (→ 다시 시도)"""
+    try:
+        d = json.loads(text[text.index("{"):text.rindex("}") + 1])
+        return d if all(isinstance(d.get(k), dict) for k in SHEET_LABELS) else None
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
+def as_list(x):
+    return x if isinstance(x, list) else [x]
+
+
+def chosen(k):
+    """2안·3안 항목에서 사용자가 고른 안 (안 골랐으면 1안)"""
+    opts = as_list(s.sheet[k].get("options") or s.sheet[k].get("value", ""))
+    return s.get(f"pick_{k}") if s.get(f"pick_{k}") in opts else opts[0]
+
+
+def sheet_text(sh):
+    """시트를 글로 (활용 템플릿 요청에 넣음). 고른 안 기준"""
+    val = lambda k: chosen(k) if "options" in sh[k] else ", ".join(map(str, as_list(sh[k].get("value", ""))))
+    return "\n".join(f"{label}: {val(k)}" for k, label in SHEET_LABELS.items())
+
+
+def sheet_quotes():
+    qs = [q for it in s.sheet.values() if isinstance(it, dict) for q in as_list(it.get("quotes", [])) if isinstance(q, str)]
+    return list(dict.fromkeys(qs + [p["quote"] for p in s.get("palettes", []) if p.get("quote")]))  # 같은 인용은 한 번만 셈
 
 
 def go(step):
@@ -237,11 +284,13 @@ def logo(name, alt):
 
 
 @st.dialog("브랜드 브리프", width="large")
-def brand_modal(b):
+def brand_modal(b, similar=None):
     st.markdown(f'<div class="bm-head"><span class="bm-logo">{logo("brands/" + b["logo"], b["en"])}</span><div><div class="bm-name">{b["name"]} <small>{b["en"]}</small></div>'
                 f'<div class="bm-meta">{b["since"]} · {b["founder"]}</div></div></div>'
                 f'<div class="bm-msg">“{b["message"]}”<small>{"대표 문구" if b["official"] else "핵심 생각 (공식 문구 아님, 요약)"}</small></div>'
                 f'<div class="bm-tags">{"".join(f"<span>#{k}</span>" for k in b["keywords"])}</div>', unsafe_allow_html=True)
+    if similar:  # 결과 시트 '닮은 브랜드'에서 열었을 때
+        st.markdown(f'<div class="bm-similar"><b>내 브랜드와 닮은 점</b>{similar}</div>', unsafe_allow_html=True)
     sentences = re.split(r"(?<=[.!?])\s+", b["story"])  # 큰 화면에서 한두 줄로 뭉쳐 보이지 않게 문장마다 줄바꿈
     st.markdown("**시작 이야기**  \n" + "  \n".join(sentences))
     st.info(f'**작은 브랜드가 배울 점** {b["lesson"]}')
@@ -267,7 +316,7 @@ def show_templates():
     st.markdown('<div class="hero story-hero"><span class="eyebrow">TEMPLATES</span><div class="page-title">리포트를 바로 쓰는 문구로</div>'
                 '<p class="hero-sub">채널을 고르면 내 브랜드 리포트를 그 채널에 맞는 문구로 바꿔 드려요. 복사 버튼으로 바로 붙여 넣으세요.</p></div>',
                 unsafe_allow_html=True)
-    if not s.get("brief"):
+    if not s.get("sheet"):
         st.info("브랜드 코칭을 마치고 리포트를 받으면, 여기서 채널별 문구를 바로 만들 수 있어요.")
         st.markdown("".join(f'<div class="ch-row"><b>{ch}</b><span>{items}</span></div>' for ch, items in CHANNELS.items()), unsafe_allow_html=True)
         st.button("브랜드 코칭 시작하기", type="primary", on_click=lambda: s.update(page="브랜드 코칭"))
@@ -278,7 +327,7 @@ def show_templates():
     tpl = s.setdefault("tpl", {})  # 채널별로 한 번 만든 결과는 저장 (다시 누르면 새로 만듦)
     if st.button("이 채널 문구 만들기" if ch not in tpl else "다시 만들기", type="primary"):
         with st.spinner(f"{ch}에 맞게 쓰고 있어요…"):
-            text, err = ask_ai(TEMPLATE, channel=ch, items=CHANNELS[ch], brief=s.brief)
+            text, err = ask_ai(TEMPLATE, channel=ch, items=CHANNELS[ch], brief=sheet_text(s.sheet))
         if err:
             st.error(err)
         else:
@@ -337,6 +386,147 @@ ICONS = {
 }
 HOME_STEPS = [("진단", "차고에서 나에게 묻기"), ("성향", "간판 느낌 고르기"), ("확인", "내용 확인"), ("리포트", "리포트 받기")]
 
+def contrast(a, b):
+    """두 색의 명도 대비 (WCAG 식)"""
+    def lum(h):
+        f = lambda c: c / 12.92 if c <= .03928 else ((c + .055) / 1.055) ** 2.4
+        r, g, b_ = (f(int(h[i:i + 2], 16) / 255) for i in (1, 3, 5))
+        return .2126 * r + .7152 * g + .0722 * b_
+    hi, lo = sorted([lum(a), lum(b)], reverse=True)
+    return (hi + .05) / (lo + .05)
+
+
+def namecard(bt):
+    """추천 컬러·슬로건·무드로 만든 명함 미리보기 ('내 브랜드가 있으면 이렇게 보이겠구나')"""
+    if not s.get("palettes"):
+        return ""
+    cols = [c["hex"] for c in s.palettes[s.get("pal", 0)]["colors"]]
+    bg = cols[0]
+    fg = max(cols[1:] + ["#ffffff", "#1f1f1f"], key=lambda c: contrast(bg, c))  # 배경 위에서 가장 잘 읽히는 색
+    mood = " · ".join(map(str, as_list(s.sheet["mood"].get("value", []))[:3]))
+    return (f'<div class="namecard" style="--bg:{bg};--fg:{fg};--ac:{cols[-1]}"><span class="nc-type">{bt}형</span>'
+            f'<div class="nc-name">{html.escape(s.name)}</div><div class="nc-slogan">{html.escape(chosen("slogans"))}</div>'
+            f'<div class="nc-foot">{html.escape(mood)}</div></div><p class="hx-cap">추천 컬러·슬로건으로 만든 명함 미리보기</p>')
+
+
+def soft_breaks(text):
+    """긴 문장은 쉼표·마침표 뒤에서 줄을 바꿔 읽기 쉽게"""
+    t_ = html.escape(str(text))
+    return re.sub(r"([,.])\s+", r"\1<br>", t_) if len(t_) > 28 else t_
+
+
+def postits(items):
+    return "".join(f'<span class="postit">{html.escape(str(x))}</span>' for x in items)
+
+
+def sheet_value(k):
+    """시트 한 줄의 '최종 값' 화면 (고른 보기 목록이 아니라 AI·앱이 엮은 결론)"""
+    if k == "type":
+        bt, _ = brand_type(s.kind, s.picks)
+        return f'<div class="sv-main">{bt}형</div><div class="sv-sub">{TYPES[bt]["desc"]}</div>'
+    if k == "like":
+        by_logo = {b["logo"]: b for b in BRANDS}
+        bt, _ = brand_type(s.kind, s.picks)
+        return '<div class="sv-likes">' + "".join(
+            f'<span>{logo("brands/" + key, by_logo[key]["en"])}{by_logo[key]["name"]}</span>' for key, _ in TYPES[bt]["like"]) + "</div>"
+    if k == "color":
+        if not s.get("palettes"):
+            return '<div class="sv-sub">컬러를 만들지 못했어요. 상세에서 다시 시도할 수 있어요.</div>'
+        p = s.palettes[s.get("pal", 0)]
+        sw = "".join(f'<i style="background:{c["hex"]}" title="{c["hex"]}"></i>' for c in p["colors"])
+        return f'<div class="sv-swatch">{sw}</div><div class="sv-sub">{html.escape(str(p.get("name", "")))} · ' + " / ".join(f'{c.get("role", "")} {c["hex"].upper()}' for c in p["colors"]) + "</div>"
+    it = s.sheet[k]
+    if "options" in it:
+        n = len(as_list(it["options"]))
+        return f'<div class="sv-main">{soft_breaks(chosen(k))}</div>' + (f'<div class="sv-sub">다른 안 {n - 1}개 · 상세에서 바꿀 수 있어요</div>' if n > 1 else "")
+    v = it.get("value", "")
+    if k in ("values", "mood"):
+        return '<div class="sv-chips">' + "".join(f"<span>{html.escape(str(x))}</span>" for x in as_list(v)) + "</div>"
+    if k == "advice":
+        return "<ul class=sv-list>" + "".join(f"<li>{html.escape(str(x))}</li>" for x in as_list(v)) + "</ul>"
+    if k == "todo":
+        return "<ol class=sv-list>" + "".join(f"<li>{html.escape(str(x))}</li>" for x in as_list(v)) + "</ol>"
+    out = f'<div class="sv-main">{soft_breaks(v)}</div>'
+    if k == "personality" and it.get("example"):
+        out += f'<div class="sv-sub">“{soft_breaks(it["example"])}”</div>'
+    if k == "strategy":
+        out += "<ul class=sv-list>" + "".join(f"<li>{html.escape(str(x))}</li>" for x in as_list(it.get("points", []))) + "</ul>"
+    return out
+
+
+def detail_body(k, label, kp):
+    st.markdown(f'<div class="why-label">{label}</div>', unsafe_allow_html=True)
+    if k == "type":
+        bt, reasons = brand_type(s.kind, s.picks)
+        tp = TYPES[bt]
+        st.markdown(f'<div class="why-value">{bt}형 — {tp["desc"]}</div>', unsafe_allow_html=True)
+        score = " · ".join(f"{t}형 {len(r)}점" for t, r in sorted(reasons.items(), key=lambda x: -len(x[1])) if r)
+        st.markdown(f"코칭에서 고른 보기마다 가까운 유형에 1점씩 더했어요. **{score}** 로, {bt}형이 가장 높았어요."
+                    " (동점이면 첫 장면에서 고른 '시작한 이유'를 우선해요.)")
+        st.markdown(f'<div class="why-quotes"><b>{bt}형 점수를 만든 내 선택</b>{postits(reasons[bt])}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="type-tips"><div><b>이 유형이 잘하는 것</b>{tp["good"]}</div><div><b>조심할 것</b>{tp["care"]}</div></div>', unsafe_allow_html=True)
+        st.caption("유형은 AI가 아니라 앱이 정해진 규칙으로 계산해요. 같은 선택이면 늘 같은 결과예요. (브랜딩 이론을 참고해 쉽게 만든 분류)")
+        return
+    if k == "like":
+        by_logo = {b["logo"]: b for b in BRANDS}
+        bt, _ = brand_type(s.kind, s.picks)
+        st.markdown(f"내 브랜드가 **{bt}형**이라서, 같은 성격이 두드러지는 브랜드를 골랐어요. 규모가 아니라 '성격'이 닮았다는 뜻이에요.")
+        for key, why in TYPES[bt]["like"]:
+            st.markdown(f'**{by_logo[key]["name"]}** — {why}')
+        st.caption("목록의 브랜드 버튼을 누르면 그 브랜드의 시작 이야기를 볼 수 있어요.")
+        return
+    if k == "color":
+        if not s.get("palettes"):
+            if st.button("컬러 다시 추천받기", key=f"{kp}retry_pal"):
+                s.pop("palettes", None)
+                st.rerun()
+            return
+        names = [p.get("name", f"{j + 1}안") for j, p in enumerate(s.palettes)]
+        j = st.radio("컬러 안", range(len(names)), index=s.get("pal", 0), format_func=lambda x: names[x], horizontal=True, key=f"{kp}w_pal")
+        show_palette(s.palettes[j])
+        if st.button("이 컬러로 정하기", type="primary", key=f"{kp}set_pal"):
+            s.pal = j
+            st.rerun()
+        return
+    it = s.sheet[k]
+    opts = as_list(it.get("options", []))
+    if len(opts) > 1:
+        st.caption("AI가 서로 다른 방향을 제안했어요. 내 생각에 더 가까운 안을 골라 주세요.")
+        v = st.radio("안 고르기", opts, index=opts.index(chosen(k)), key=f"{kp}w_{k}", label_visibility="collapsed")
+        if st.button("이 안으로 정하기", type="primary", key=f"{kp}set_{k}"):
+            s[f"pick_{k}"] = v
+            st.rerun()
+    else:
+        st.markdown(sheet_value(k), unsafe_allow_html=True)
+    st.markdown(f'<div class="why-text">{html.escape(str(it.get("why", "")))}</div>', unsafe_allow_html=True)
+    qs = [q for q in as_list(it.get("quotes", [])) if isinstance(q, str)]
+    if qs:
+        bad = unmatched(qs)
+        st.markdown(f'<div class="why-quotes"><b>근거가 된 내 선택·내 말</b>{postits(qs)}</div>', unsafe_allow_html=True)
+        if bad:
+            st.warning(f"이 인용은 내 입력과 그대로 일치하지 않아요: {' / '.join(bad)}")
+    st.caption("이건 AI의 해석이에요. 내 생각과 다른 부분은 덜어 내고 보세요. 판단은 내 몫이에요.")
+
+
+def sheet_item(k, label, sel):
+    with st.container(border=True, key=f"card_{k}"):
+        st.markdown(f'<div class="sl">{label}</div>{sheet_value(k) if k != "like" else ""}', unsafe_allow_html=True)
+        if k == "like":  # 닮은 브랜드: 누르면 브랜드 스토리 모달 + 닮은 점
+            by_logo = {b["logo"]: b for b in BRANDS}
+            bt, _ = brand_type(s.kind, s.picks)
+            for key, why in TYPES[bt]["like"]:
+                b = by_logo[key]
+                if st.button(f'{b["name"]} 이야기 보기', key=f"likeb_{key}", use_container_width=True):
+                    brand_modal(b, similar=f"{why}. 내 브랜드처럼 {bt}형의 성격이 두드러져요.")
+        if k == sel:
+            st.markdown('<span class="sel-mark">상세 보는 중 →</span>', unsafe_allow_html=True)
+            with st.container(key="detail_inline"):  # 모바일 전용 (CSS로 데스크톱에선 숨김)
+                detail_body(k, label, "m_")
+        elif st.button("상세", key=f"why_{k}"):
+            s.detail = k
+            st.rerun()
+
+
 PAGES = {"브랜드 코칭": None, "활용 템플릿": show_templates, "브랜드 스토리": show_stories, "1:1 멘토링": show_mentors}
 page = st.segmented_control("메뉴", list(PAGES), default="브랜드 코칭", key="page", label_visibility="collapsed")
 if PAGES.get(page):
@@ -387,6 +577,7 @@ elif s.step == 1:
 elif s.step == 2:
     i = s.q
     sc = SCENES[s.kind][i]
+    wall_slot = st.empty()  # 포스트잇 벽: 맨 위 고정 (아래에서 고른 내용으로 채움)
     st.markdown(f'<div class="scene-head"><span class="day">GARAGE DAY 1 · 장면 {i + 1}/{N}</span>{bulbs(i)}</div>'
                 f'<p class="scene">{sc["scene"]}</p><div class="ask">“{sc["ask"]}”</div>', unsafe_allow_html=True)
     if s.more[i]:
@@ -411,7 +602,7 @@ elif s.step == 2:
         note = st.text_input(f"✏️ 조금만 더: {detail[0]} (선택, 한 줄)", s.notes[i], key=f"n{i}")
     s.picks[i], s.notes[i] = chosen, note
     s.answers[i] = answer_text(chosen, note)
-    st.markdown(wall(wall_items(i), chosen + ([note.strip()] if note.strip() else [])), unsafe_allow_html=True)
+    wall_slot.markdown(wall(wall_items(i), chosen + ([note.strip()] if note.strip() else [])), unsafe_allow_html=True)
     c1, c2 = st.columns(2)
     if c1.button("이전") and i > 0:
         s.q -= 1
@@ -436,6 +627,7 @@ elif s.step == 2:
             go(3)
 
 elif s.step == 3:
+    st.markdown(wall(wall_items(N) + s.get("traits", [])), unsafe_allow_html=True)
     st.markdown(f'<div class="scene-head"><span class="day">GARAGE DAY 1 · 마지막 장면</span>{bulbs(N)}</div>'
                 '<p class="scene">벽을 가득 채운 포스트잇을 본다. 이제 간판을 상상해 볼 차례.</p><div class="ask">“내 가게 간판은 어떤 느낌일까?”</div>',
                 unsafe_allow_html=True)
@@ -458,10 +650,10 @@ elif s.step == 3:
         if c2.button("아이디어 ON!", type="primary"):
             s.tone = tone
             go(4)
-    st.markdown(wall(wall_items(N) + s.get("traits", [])), unsafe_allow_html=True)
 
 elif s.step == 4:
-    st.header("제가 이해한 건 이런 뜻이에요")
+    st.header("제가 이해한 내용")
+    st.caption("제가 이해한 내용이 맞는지 확인해 주세요. 다르면 아래에 고칠 점을 적어 주시면 다시 정리할게요.")
     if "reflect" not in s:
         with st.spinner("정리하고 있어요…"):
             s.reflect, s.err = ask_ai(REFLECT)
@@ -471,7 +663,8 @@ elif s.step == 4:
             del s["reflect"]
             st.rerun()
     else:
-        st.markdown(s.reflect)
+        with st.container(border=True, key="reflect"):
+            st.markdown(re.sub(r"^#{1,3}[^\n]*이런 뜻이에요[^\n]*\n+", "", s.reflect.strip()))  # AI가 전체 제목을 붙여도 지움
         if st.button("맞아요", type="primary"):
             go(5)
         s.fix = st.text_area("조금 달라요 — 고칠 내용을 적어 주세요", s.get("fix", ""))
@@ -480,69 +673,55 @@ elif s.step == 4:
             st.rerun()
 
 else:
-    st.header(f"{s.name} 브랜드 정리")
-    if "brief" not in s:
-        with st.spinner("정리본을 만들고 있어요…"):
-            s.brief, s.err = ask_ai(BRIEF)
+    if "sheet" not in s:
+        with st.spinner("내 브랜드 시트를 만들고 있어요… (30초쯤 걸려요)"):
+            text, s.err = ask_ai(SHEET)
+        s.sheet = None if s.err else parse_sheet(text or "")
+        if not s.err and s.sheet is None:
+            s.err = "결과 형식이 맞지 않았어요. 다시 시도해 주세요."
+        if s.sheet:
+            s.brief = sheet_text(s.sheet)
     if s.err:
         st.error(s.err)
         if st.button("다시 시도"):
-            del s["brief"]
+            s.pop("sheet", None)
+            s.err = None
             st.rerun()
     else:
-        tab_brief, tab_mentor = st.tabs(["정리본", "1:1 멘토링"])
-        with tab_brief:
-            bt, reasons = brand_type(s.kind, s.picks)
-            tp = TYPES[bt]
-            st.markdown(f'<div class="type-card"><span class="eyebrow">내 브랜드 유형</span><div class="type-name">{bt}형</div>'
-                        f'<p class="type-desc">{tp["desc"]}</p><div class="type-why"><b>이 선택들 때문이에요</b>'
-                        f'{"".join(f"<span class=postit>{html.escape(r)}</span>" for r in reasons[bt])}</div>'
-                        f'<div class="type-tips"><div><b>이 유형이 잘하는 것</b>{tp["good"]}</div><div><b>조심할 것</b>{tp["care"]}</div></div></div>',
+        if "palettes" not in s:
+            with st.spinner("어울리는 컬러를 고르고 있어요…"):
+                text, _ = ask_ai(COLORS)
+            s.palettes, s.pal = parse_palettes(text or ""), 0
+        one = s.sheet["one_liner"].get("value", "")
+        bt, reasons = brand_type(s.kind, s.picks)
+        vals = "".join(f"<span>#{html.escape(str(v))}</span>" for v in as_list(s.sheet["values"].get("value", [])))
+        with st.container(key="profile"):
+            c1, c2 = st.columns([3, 2], vertical_alignment="center")
+            c1.markdown(f'<span class="eyebrow">BRAND IDENTITY</span><div class="sheet-name">{html.escape(s.name)}<span class="mt-badge">{bt}형</span></div>'
+                        f'<p class="sheet-one">{html.escape(str(one))}</p><div class="bm-tags">{vals}</div>'
+                        '<p class="sheet-hint">내 선택과 내 말을 엮어서 낸 결론이에요. 항목의 <b>상세</b>를 누르면 이렇게 나온 이유와 근거를 볼 수 있어요.</p>',
                         unsafe_allow_html=True)
-            st.caption("유형은 AI가 아니라 고른 보기로 앱이 계산해요. 같은 선택이면 늘 같은 결과예요. (브랜딩 이론을 참고해 쉽게 만든 분류)")
-            by_logo = {b["logo"]: b for b in BRANDS}
-            for col, (key, why) in zip(st.columns(len(tp["like"])), tp["like"]):
-                col.markdown(f'**닮은 브랜드 · {by_logo[key]["name"]}**  \n{why}')
-                if col.button(f'{by_logo[key]["name"]} 이야기 보기', key=f"like_{key}"):
-                    brand_modal(by_logo[key])
-            picks = {item: two_options(item) for item in ["미션", "핵심 메시지"]}
-            if all(len(v) == 2 for v in picks.values()):
-                with st.container(border=True):
-                    st.subheader("내 브랜드 문장 고르기")
-                    st.caption("AI가 방향을 2개씩 제안했어요. 내 생각에 더 가까운 쪽을 고르면 그게 내 브랜드 문장이에요.")
-                    for item, opts in picks.items():
-                        st.radio(f"내 {item}", opts, key=f"choose_{item}")
-            with st.container(border=True):
-                st.markdown(s.brief.replace("\n", "  \n"))  # 결과/이유/근거/팁이 한 줄로 붙지 않게
-                quotes = re.findall(r"「(.+?)」", s.brief)
-                bad = unmatched(quotes)
-                st.caption(f"근거 확인: AI가 인용한 내 답 {len(quotes)}개 중 {len(quotes) - len(bad)}개가 입력과 그대로 일치해요."
-                           + (f" 일치하지 않는 인용: {' / '.join(bad)}." if bad else "")
-                           + " AI가 만든 글이니 사실과 다른 부분이 없는지 직접 확인해 주세요.")
-            st.button("이 리포트로 채널별 문구 만들기", on_click=lambda: s.update(page="활용 템플릿"))
-            if "palettes" not in s:
-                with st.spinner("어울리는 컬러를 고르고 있어요…"):
-                    text, _ = ask_ai(COLORS)
-                s.palettes, s.pal = parse_palettes(text or ""), 0
-            # 서비스는 컬러 영향이 상대적으로 작아 접어 둠 (사용자 의견 10/29)
-            box = st.expander("추천 컬러 (선택)") if s.kind == "서비스" else st.container(border=True)
-            with box:
-                st.subheader("추천 컬러")
-                if not s.palettes:
-                    st.info("컬러 추천을 만들지 못했어요. 아래 버튼으로 다시 시도해 주세요.")
-                    if st.button("컬러 다시 추천받기"):
-                        del s["palettes"]
-                        st.rerun()
-                else:
-                    st.caption(f"{s.pal + 1}안 / {len(s.palettes)}안 · 로고·상세페이지·SNS에 쓸 색이에요. 마음에 들지 않으면 다른 안을 보세요.")
-                    show_palette(s.palettes[s.pal])
-                    if len(s.palettes) > 1 and st.button("다른 안 보기"):
-                        s.pal = (s.pal + 1) % len(s.palettes)
-                        st.rerun()
-        with tab_mentor:
-            st.subheader("우리 업계 이야기를 더 자세히 듣고 싶다면")
-            st.write("정리본을 가지고 분야별 멘토와 1:1로 이야기해 보는 멘토링이에요. 첫 1회는 무료예요.")
-            st.button("멘토 둘러보기", on_click=lambda: s.update(page="1:1 멘토링"))
+            c2.markdown(namecard(bt), unsafe_allow_html=True)
+        items = [("type", "브랜드 유형"), ("customer", "주요 고객층"), ("pain", "고객의 고민"), ("mission", "미션"), ("message", "핵심 메시지"),
+                 ("slogans", "슬로건"), ("personality", "성격·말투"), ("strategy", "판매 전략"), ("color", "아이덴티티 컬러"),
+                 ("mood", "무드 키워드"), ("like", "닮은 브랜드"), ("todo", "이번 주 할 일"), ("advice", "더 생각해 볼 것")]
+        labels = dict(items)
+        sel = s.get("detail", "type")
+        left, right = st.columns([5, 6], gap="large")
+        with left:
+            for k, label in items:
+                sheet_item(k, label, sel)
+        with right, st.container(key="detail_panel"):  # 데스크톱: 오른쪽 절반에 고정된 상세 창
+            detail_body(sel, labels[sel], "d_")
+        quotes = sheet_quotes()
+        bad = unmatched(quotes)
+        st.caption(f"근거 확인: AI가 인용한 내 답 {len(quotes)}개 중 {len(quotes) - len(bad)}개가 입력과 그대로 일치해요."
+                   + (f" 일치하지 않는 인용: {' / '.join(bad)}." if bad else "")
+                   + " AI가 만든 글이니 사실과 다른 부분이 없는지 직접 확인해 주세요.")
+        c1, c2 = st.columns(2)
+        c1.button("이 시트로 채널별 문구 만들기", type="primary", on_click=lambda: s.update(page="활용 템플릿"))
+        c2.button("멘토와 이야기해 보기 (첫 1회 무료)", on_click=lambda: s.update(page="1:1 멘토링"))
     if st.button("처음부터 다시"):
         s.clear()
+        st.query_params.clear()  # 예시 링크로 들어왔어도 빈 상태로 다시 시작
         st.rerun()
