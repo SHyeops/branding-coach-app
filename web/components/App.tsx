@@ -195,7 +195,11 @@ export default function App() {
         setS(p => ({ ...p, sheet, err: e ?? (sheet ? null : "결과 형식이 맞지 않았어요. 다시 시도해 주세요."), ...(sheet ? { brief: sheetText({ ...p, sheet }) } : {}) }));
       });
     else if (s.step === 5 && s.sheet && s.palettes === undefined)
-      run("colors", async () => { const [t] = await askAI("COLORS", s); up({ palettes: parsePalettes(t ?? ""), pal: 0 }); });
+      run("colors", async () => {
+        let palettes = parsePalettes((await askAI("COLORS", s))[0] ?? "");
+        if (!palettes.length) palettes = parsePalettes((await askAI("COLORS", s))[0] ?? ""); // 가끔 형식이 어긋나 0개(측정 10건 중 3건) → 한 번 더
+        up({ palettes, pal: 0 });
+      });
   }, [s.step, s.reflect, s.sheet, s.palettes, s.err]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const reset = () => { setS(emptyState()); setPage("브랜드 코칭"); window.history.replaceState(null, "", "/"); };

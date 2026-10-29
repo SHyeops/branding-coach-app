@@ -14,7 +14,7 @@ for (const r of rows) {
   console.log(`${ok ? "OK " : "XX "} ${id} ${found.length}건 ${found.map(f => `[${f.cat}] ${f.word}`).join(" / ")}`);
 }
 // 흔한 정상 문장이 잡히지 않는지 (오탐 방지)
-for (const t of ["최대 4명 소규모", "맛과 당도는 일반 사과와 같아요", "꼼꼼한 안내와 관리", "출근 전 30분 PT"]) {
+for (const t of ["최대 4명 소규모", "맛과 당도는 일반 사과와 같아요", "꼼꼼한 안내와 관리", "출근 전 30분 PT", "합격 보장 표현을 빼고 과정을 설명한다", "합격 보장 대신 경험을 설명해요"]) {
   const f = findExaggeration(t);
   if (f.length) { fail++; console.log("XX 오탐:", t, f.map(x => x.word)); }
 }
