@@ -1,5 +1,8 @@
 """From Your Garage — 질문으로 찾는 내 브랜드. 단계: 0 홈 → 1 기본 정보 → 2 진단 질문 → 3 성향 찾기 → 4 되비추기 → 5 리포트"""
+import html
+import json
 import os
+import re
 from pathlib import Path
 
 import streamlit as st
@@ -52,9 +55,21 @@ REFLECT = """사용자가 답한 내용을 "말씀하신 건 이런 뜻이에요
 {rules}
 
 {info}"""
-BRIEF = """아래 내용으로 브랜드 요약 카드를 만들어줘. 항목: 미션 / 핵심 가치 3개 / 성격·말투 / 핵심 메시지 / 슬로건 3안 / 무드 키워드와 컬러.
-정보가 부족해 채울 수 없는 항목(또는 항목의 일부)은 "아직 정해지지 않았어요. (채우려면: 사용자에게 던질 질문 1개)" 형식으로 쓴다. 질문에는 새 사실을 넣지 않는다.
+BRIEF = """아래 내용으로 브랜드 분석 리포트를 만들어줘. 항목: 미션 / 핵심 가치 3개 / 성격·말투 / 핵심 메시지 / 슬로건 3안 / 무드 키워드.
+항목마다 아래 형식을 지킨다.
+### 항목 이름
+**결과:** 내용
+**이유:** 왜 이렇게 정리했는지 1~2문장
+**근거가 된 내 답:** 사용자 정보의 문장을 「」 안에 한 글자도 바꾸지 말고 그대로 옮긴다 (1~2개)
+**쓸 때 팁:** 상세페이지·SNS·간판 등 어디에 어떻게 쓰면 좋은지 1문장
+정보가 부족해 채울 수 없는 항목(또는 항목의 일부)은 결과에 "아직 정해지지 않았어요. (채우려면: 사용자에게 던질 질문 1개)"라고 쓰고 근거는 비운다. 질문에는 새 사실을 넣지 않는다.
 같은 표현을 반복해 항목을 억지로 채우지 말고, 근거가 있는 것만 쓴다. 성격·말투는 사용자가 고른 성향과 말투 예시를 근거로 쓴다.
+{rules}
+
+{info}"""
+# 컬러는 사실이 아니라 제안 → 3안을 한 번에 받아 "다른 안 보기"로 넘김
+COLORS = """아래 사용자 정보(특히 고른 성향)에 어울리는 브랜드 컬러 조합 3안을 추천해줘. 안마다 색 3개(메인/보조/강조)를 고른다.
+반드시 JSON만 출력한다: {{"palettes": [{{"name": "조합 이름", "colors": [{{"hex": "#RRGGBB", "role": "메인"}}, ...], "why": "이 조합을 고른 이유 1~2문장", "quote": "근거가 된 사용자 정보 문장 1개를 한 글자도 바꾸지 않고 그대로"}}]}}
 {rules}
 
 {info}"""
@@ -85,6 +100,32 @@ def ask_ai(template, **extra):
         return res.choices[0].message.content, None
     except Exception:
         return None, "AI 연결에 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요."
+
+
+def unmatched(quotes):
+    """AI가 '내 답'이라며 인용한 문장 중 실제 입력에 없는 것 (띄어쓰기 차이는 무시)"""
+    src = "".join(info_text().split())
+    return [q for q in quotes if "".join(q.split()) not in src]
+
+
+def parse_palettes(text):
+    """AI가 준 JSON에서 형식이 맞는 안만 남김 (색 값은 HTML에 들어가므로 #RRGGBB만 허용)"""
+    try:
+        data = json.loads(re.sub(r"^```(json)?|```$", "", text.strip()).strip())
+        return [p for p in data["palettes"]
+                if p.get("colors") and all(re.fullmatch(r"#[0-9a-fA-F]{6}", c.get("hex", "")) for c in p["colors"])]
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return []
+
+
+def show_palette(p):
+    chips = "".join(f'<div class="chip"><div style="background:{c["hex"]}"></div><b>{html.escape(str(c.get("role", "")))}</b>'
+                    f'<span>{c["hex"].upper()}</span></div>' for c in p["colors"])
+    st.markdown(f'<p class="pal-name">{html.escape(str(p.get("name", "")))}</p><div class="palette">{chips}</div>',
+                unsafe_allow_html=True)
+    st.markdown(f'**이유:** {p.get("why", "")}')
+    if p.get("quote"):
+        st.markdown(f'**근거가 된 내 답:** 「{p["quote"]}」' + (" ⚠️ 내 답과 일치하지 않아요" if unmatched([p["quote"]]) else ""))
 
 
 st.set_page_config(page_title=f"{APP_NAME} — 질문으로 찾는 내 브랜드")
@@ -219,9 +260,33 @@ else:
             st.rerun()
     else:
         tab_brief, tab_mentor = st.tabs(["정리본", "1:1 멘토링"])
-        with tab_brief, st.container(border=True):
-            st.markdown(s.brief)
-            st.caption("AI가 만든 글이에요. 사실과 다른 부분이 없는지 직접 확인해 주세요.")
+        with tab_brief:
+            with st.container(border=True):
+                st.markdown(s.brief.replace("\n", "  \n"))  # 결과/이유/근거/팁이 한 줄로 붙지 않게
+                quotes = re.findall(r"「(.+?)」", s.brief)
+                bad = unmatched(quotes)
+                st.caption(f"근거 확인: AI가 인용한 내 답 {len(quotes)}개 중 {len(quotes) - len(bad)}개가 입력과 그대로 일치해요."
+                           + (f" 일치하지 않는 인용: {' / '.join(bad)}." if bad else "")
+                           + " AI가 만든 글이니 사실과 다른 부분이 없는지 직접 확인해 주세요.")
+            if "palettes" not in s:
+                with st.spinner("어울리는 컬러를 고르고 있어요…"):
+                    text, _ = ask_ai(COLORS)
+                s.palettes, s.pal = parse_palettes(text or ""), 0
+            # 서비스는 컬러 영향이 상대적으로 작아 접어 둠 (사용자 의견 10/29)
+            box = st.expander("추천 컬러 (선택)") if s.kind == "서비스" else st.container(border=True)
+            with box:
+                st.subheader("추천 컬러")
+                if not s.palettes:
+                    st.info("컬러 추천을 만들지 못했어요. 아래 버튼으로 다시 시도해 주세요.")
+                    if st.button("컬러 다시 추천받기"):
+                        del s["palettes"]
+                        st.rerun()
+                else:
+                    st.caption(f"{s.pal + 1}안 / {len(s.palettes)}안 · 로고·상세페이지·SNS에 쓸 색이에요. 마음에 들지 않으면 다른 안을 보세요.")
+                    show_palette(s.palettes[s.pal])
+                    if len(s.palettes) > 1 and st.button("다른 안 보기"):
+                        s.pal = (s.pal + 1) % len(s.palettes)
+                        st.rerun()
         with tab_mentor:
             st.subheader("우리 업계 이야기를 더 자세히 듣고 싶다면")
             st.write("정리본을 가지고 해당 업계 현직자와 1:1로 이야기해 보는 멘토링이에요. (유료)")
