@@ -20,6 +20,7 @@ def load():
 def status(t, today):
     """(종류, 꼬리표) — done/ahead/doing/early/late/today/todo"""
     kind, _, d = t["act"].partition(" ")
+    if kind == "제외": return ("skip", "— 하지 않기로 함")
     gap = WORK.index(t["plan"]) - WORK.index(d) if d in WORK else 0
     if kind == "완료": return ("ahead", f"⏩ {d}에 끝 · {gap}일 당김") if gap > 0 else ("done", "✓ 끝")
     if WORK.index(t["plan"]) < WORK.index(today): return ("late", "⚠ 늦음" + (f" · {d} 시작" if d else ""))
@@ -28,6 +29,7 @@ def status(t, today):
 
 
 def summary(ts, today):
+    ts = [t for t in ts if status(t, today)[0] != "skip"]  # 제외한 일은 계산에서 뺌
     st = {t["id"]: status(t, today)[0] for t in ts}
     due = [t for t in ts if WORK.index(t["plan"]) <= WORK.index(today)]
     done_due = [t for t in due if st[t["id"]] in ("done", "ahead")]
@@ -52,6 +54,7 @@ STY = {  # 카드 배경, 테두리, 대시, 꼬리표 색
     "doing": ("none", AMB, "", AMB), "early": ("none", PINK, "5,4", PINK),
     "today": ("none", AMB, "5,4", AMB), "todo": ("none", "rgba(255,255,255,0.28)", "5,4", INK2),
     "late": ("rgba(255,107,107,0.10)", RED, "", RED),
+    "skip": ("none", "rgba(255,255,255,0.12)", "2,4", "#6b6b6b"),
 }
 
 
@@ -87,10 +90,10 @@ def render(ts, today, src):
             y = TOP + i * (CH + GAP)
             o.append(f'<rect x="{bx}" y="{y}" width="{bw}" height="{CH}" rx="6" fill="{fill}" stroke="{stroke}"' + (f' stroke-dasharray="{dash}"' if dash else "") + "/>")
             o.append(f'<text x="{bx + 10}" y="{y + 21}" font-family="{M}" font-size="11" fill="{INK2}">{t["id"]}</text>')
-            o.append(f'<text x="{bx + 42}" y="{y + 21}" font-family="{F}" font-size="13" font-weight="600" fill="{INK}">{e(t["name"])}{" 👥" if t["people"] else ""}</text>')
+            o.append(f'<text x="{bx + 42}" y="{y + 21}" font-family="{F}" font-size="13" font-weight="600" fill="{"#6b6b6b" if k == "skip" else INK}"' + (' text-decoration="line-through"' if k == "skip" else "") + f'>{e(t["name"])}{" 👥" if t["people"] else ""}</text>')
             o.append(f'<text x="{bx + 42}" y="{y + 41}" font-family="{F}" font-size="12" fill="{tc}">{e(tag)}</text>')
     lg = [("■ 회색 ✓ = 계획한 날에 끝", INK2), ("■ 분홍 ⏩ = 계획보다 먼저 끝", PINK), ("┅ 분홍 ◐ = 미리 시작", PINK),
-          ("┅ 노랑 ○ = 남은 일", AMB), ("■ 빨강 ⚠ = 늦음", RED), ("👥 = 다른 사람 필요(평일만)", INK2)]
+          ("┅ 노랑 ○ = 남은 일", AMB), ("■ 빨강 ⚠ = 늦음", RED), ("👥 = 다른 사람 필요(평일만)", INK2), ("취소선 = 제외", INK2)]
     xx = 24
     for t, c in lg:
         o.append(f'<text x="{xx}" y="{H - 24}" font-family="{F}" font-size="12" fill="{c}">{e(t)}</text>')
@@ -141,6 +144,7 @@ if __name__ == "__main__":
     assert status(T("10/30", ""), "11/1")[0] == "late"
     assert status(T("11/2", "진행 10/30"), "10/30")[0] == "early"
     assert status(T("10/30", ""), "10/30")[0] == "today"
+    assert status(T("10/30", "제외"), "11/2")[0] == "skip"
     assert all(x["plan"] in WORK for x in ts), "계획일은 작업하는 날만"
     assert not any(x["people"] and x["plan"] == "11/1" for x in ts), "👥 일은 주말 금지"
     out = Path("results/progress/진행체크판.html")
