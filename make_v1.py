@@ -1,6 +1,8 @@
-"""v1(개선 전): 상품 10개를 '한 번에 요청' 프롬프트로 실행해 results/v1/에 저장."""
+"""v1(개선 전): 상품 10개를 '한 번에 요청' 프롬프트로 실행해 results/v1/에 저장.
+사용자 테스트: python make_v1.py results/user_test/참가자상품.csv results/user_test/v1  (같은 열 이름의 CSV)"""
 import csv
 import os
+import sys
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -26,10 +28,11 @@ PROMPT = """아래 상품의 브랜딩을 해줘.
 판매 채널: {판매 채널}
 타깃: {생각하는 타깃}"""
 
-out = Path("results/v1")
+src = sys.argv[1] if len(sys.argv) > 1 else "20261028_테스트상품_v3.csv"
+out = Path(sys.argv[2] if len(sys.argv) > 2 else "results/v1")
 out.mkdir(parents=True, exist_ok=True)
 
-with open("20261028_테스트상품_v3.csv", encoding="utf-8-sig", newline="") as f:
+with open(src, encoding="utf-8-sig", newline="") as f:
     rows = list(csv.DictReader(f))
 
 for r in rows:
