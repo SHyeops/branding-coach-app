@@ -1,6 +1,6 @@
 // AI 호출은 서버에서만 (OPENAI_API_KEY는 브라우저로 나가지 않음). 실패해도 화면이 멈추지 않게 {text} 또는 {error}로 돌려줌
 import OpenAI from "openai";
-import { D, PROMPTS, PromptName, St, fmt, infoText } from "@/lib/logic";
+import { D, PROMPTS, PromptName, St, fmt, infoText, parsePalettes } from "@/lib/logic";
 
 export const maxDuration = 120; // 브랜드 시트 생성이 30~60초 걸림
 
@@ -49,8 +49,13 @@ export async function POST(req: Request) {
   if (!model) return Response.json({ error: "모델 설정(OPENAI_MODEL)이 없어요. 환경 변수를 확인해 주세요." });
   const prompt = fmt(PROMPTS[name], { rules: D.RULES, info: infoText(s), platforms: D.PLATFORMS, ...extra });
   try {
-    const res = await new OpenAI().chat.completions.create({ model, messages: [{ role: "user", content: prompt }] });
-    return Response.json({ text: res.choices[0]?.message?.content ?? "" });
+    const res = await new OpenAI().chat.completions.create({
+      model, messages: [{ role: "user", content: prompt }],
+      ...(name === "COLORS" ? { response_format: { type: "json_object" as const } } : {}), // 컬러가 가끔 JSON이 아니어서 0안 → JSON만 받게
+    });
+    const text = res.choices[0]?.message?.content ?? "";
+    if (name === "COLORS" && !parsePalettes(text).length) console.warn("COLORS 0안 원문:", text.slice(0, 1000)); // 원인 추적용(Vercel 로그)
+    return Response.json({ text });
   } catch {
     return Response.json({ error: "AI 연결에 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요." });
   }

@@ -15,7 +15,7 @@ export type Mentor = {
 };
 export type Item = { value?: unknown; options?: unknown; why?: unknown; quotes?: unknown; example?: unknown; points?: unknown };
 export type Sheet = Record<string, Item>;
-export type Palette = { name?: string; colors: { hex: string; role?: string }[]; why?: string; quote?: string };
+export type Palette = { name?: string; colors: { hex: string; role?: string }[]; why?: string; quote?: string; fallback?: boolean };
 
 export type St = {
   step: number; q: number; kind: Kind; name: string; desc: string; memo: string;
@@ -106,12 +106,31 @@ export function parseSheet(text: string): Sheet | null {
   } catch { return null; }
 }
 
-/** 색 값은 화면 스타일에 들어가므로 #RRGGBB만 허용 */
+/** "#abc"·"abc123"도 #RRGGBB로 맞춤. 색 값은 화면 스타일에 들어가므로 그 밖의 값은 null */
+const toHex = (h: unknown) => {
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(String(h ?? "").trim());
+  return m ? "#" + (m[1].length === 3 ? [...m[1]].map(c => c + c).join("") : m[1]) : null;
+};
+
 export function parsePalettes(text: string): Palette[] {
   try {
     const d = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)); // 앞뒤 설명·코드 블록 표시가 붙어도 읽게
-    return (d.palettes as Palette[]).filter(p => p.colors?.length && p.colors.every(c => /^#[0-9a-fA-F]{6}$/.test(c.hex ?? "")));
+    return asList(d.palettes).flatMap(x => {
+      const p = x as Palette, colors = asList(p?.colors).map(c => ({ ...(c as Palette["colors"][0]), hex: toHex((c as { hex?: unknown })?.hex) }));
+      return colors.length && colors.every(c => c.hex) ? [{ ...p, colors: colors as Palette["colors"] }] : [];
+    });
   } catch { return []; }
+}
+
+/** AI 컬러가 두 번 다 비었을 때 유형별 기본 조합 (빈칸 대신) */
+const BASE_COLORS: Record<string, [string, string, string]> = {
+  해결사: ["#2F5D8A", "#EEF2F6", "#F2A541"], 돌봄: ["#7A9E87", "#F7F3EC", "#E0897A"], 장인: ["#5B4636", "#F3EEE6", "#B08D57"],
+  이야기꾼: ["#A94F3F", "#F3E6CF", "#687A4D"], 탐험가: ["#1F6F78", "#F2F4EF", "#F07F3C"], 이웃: ["#E39B3D", "#FFF8EC", "#5E8C61"],
+};
+export function fallbackPalettes(type: string): Palette[] {
+  const [a, b, c] = BASE_COLORS[type] ?? BASE_COLORS.이웃;
+  return [{ name: `${type}형 기본 조합`, fallback: true, why: `AI 추천을 받지 못해 ${type}형 브랜드에 흔히 어울리는 기본 조합을 먼저 보여드려요. 상세에서 다시 추천받을 수 있어요.`,
+    colors: [{ hex: a, role: "메인" }, { hex: b, role: "보조" }, { hex: c, role: "강조" }] }];
 }
 
 /** 2안·3안 항목에서 사용자가 고른 안 (안 골랐으면 1안) */

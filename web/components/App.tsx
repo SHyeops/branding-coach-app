@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 
 import demoData from "@/lib/demo_P02.json";
 import {
   D, N, type St, type Kind, type Brand, type Mentor, type Palette, type PromptName, type Opt,
-  emptyState, flatOptions, brandType, answerText, unmatched, asList, parseSheet, parsePalettes, chosen, sheetText, sheetQuotes, wallItems,
+  emptyState, flatOptions, brandType, answerText, unmatched, asList, parseSheet, parsePalettes, fallbackPalettes, chosen, sheetText, sheetQuotes, wallItems,
   findExaggeration, userText,
 } from "@/lib/logic";
 
@@ -198,6 +198,7 @@ export default function App() {
       run("colors", async () => {
         let palettes = parsePalettes((await askAI("COLORS", s))[0] ?? "");
         if (!palettes.length) palettes = parsePalettes((await askAI("COLORS", s))[0] ?? ""); // 가끔 형식이 어긋나 0개(측정 10건 중 3건) → 한 번 더
+        if (!palettes.length) palettes = fallbackPalettes(brandType(s.kind, s.picks)[0]); // 그래도 0개면 빈칸 대신 유형별 기본 조합
         up({ palettes, pal: 0 });
       });
   }, [s.step, s.reflect, s.sheet, s.palettes, s.err]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -419,6 +420,7 @@ export default function App() {
         <Radios options={s.palettes.map((p, n) => p.name || `${n + 1}안`)} value={s.palettes[j]?.name || `${j + 1}안`}
           onChange={v => setPalSel(s.palettes!.findIndex((p, n) => (p.name || `${n + 1}안`) === v))} />
         <PaletteView p={s.palettes[j] ?? s.palettes[0]} s={s} />
+        {s.palettes[0].fallback && <div className="btn-gap"><button className="btn" disabled={!!busy} onClick={() => up({ palettes: undefined })}>컬러 다시 추천받기</button></div>}
         <div className="btn-gap"><button className="btn primary" onClick={() => up({ pal: j })}>이 컬러로 정하기</button></div>
       </>;
     }
