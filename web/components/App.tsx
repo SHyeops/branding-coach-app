@@ -1,6 +1,6 @@
 "use client";
 // From Your Garage — 화면 전체 (Streamlit app.py에서 옮김). 메뉴: 브랜드 코칭(0 홈 → 1 기본 정보 → 2 장면 6개 → 3 간판 → 4 확인 → 5 결과) / 활용 템플릿 / 브랜드 스토리 / 1:1 멘토링
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import demoData from "@/lib/demo_P02.json";
 import {
   D, N, type St, type Kind, type Brand, type Mentor, type Palette, type PromptName, type Opt,
@@ -162,6 +162,8 @@ export default function App() {
   const [ch, setCh] = useState("인스타그램");
   const [copied, setCopied] = useState(-1);
   const inflight = useRef(new Set<string>()); // 같은 AI 요청이 두 번 나가지 않게 (개발 모드 이중 실행 포함)
+  const garageRef = useRef<HTMLElement>(null);
+  const [garagePos, setGaragePos] = useState<CSSProperties>();
   const up = (patch: Partial<St>) => setS(p => ({ ...p, ...patch }));
 
   // 테스트 모드 여부 + 예시 링크(?demo=report / ?demo=scenes: 저장해 둔 실제 AI 결과, AI를 다시 부르지 않음)
@@ -175,6 +177,21 @@ export default function App() {
   }, []);
   // 인트로는 처음 한 번만 (메뉴를 오가도 다시 안 나오게)
   useEffect(() => { if (page !== "브랜드 코칭" || s.step !== 0) setIntroSeen(true); }, [page, s.step]);
+  // 셔터 위 GARAGE를 홈 GARAGE와 같은 자리·크기에 멈추게 (셔터가 열릴 때 겹쳐 보이게). offset 값은 등장 효과(transform)의 영향을 안 받음
+  useLayoutEffect(() => {
+    const el = garageRef.current;
+    if (introSeen || !el) return;
+    const place = () => {
+      let x = 0, y = 0;
+      for (let n: HTMLElement | null = el; n; n = n.offsetParent as HTMLElement | null) { x += n.offsetLeft; y += n.offsetTop; }
+      setGaragePos({ "--gx": `${x + el.offsetWidth / 2 - window.scrollX}px`, "--gy": `${y + el.offsetHeight / 2 - window.scrollY}px`, "--gs": getComputedStyle(el).fontSize } as CSSProperties);
+    };
+    place();
+    document.fonts?.ready.then(place); // 글꼴이 늦게 오면 폭이 바뀜
+    const ro = new ResizeObserver(place); // 창 크기·위쪽 안내 띠 등장으로 자리가 바뀌면 다시 잼
+    ro.observe(document.body);
+    return () => ro.disconnect();
+  }, [introSeen]);
   // 화면이 바뀌면 맨 위부터 (리포트로 넘어갈 때 중간부터 보이던 문제)
   useEffect(() => { window.scrollTo(0, 0); setWarn(""); }, [page, s.step, s.q]);
 
@@ -213,7 +230,7 @@ export default function App() {
       <div className={`home${introSeen ? " seen" : ""}`}>
         <div className="hero">
           <span className="eyebrow">질문으로 찾는 내 브랜드</span>
-          <div className="brand-title" role="heading" aria-level={1}><span className="by">From Your</span> <em>GARAGE</em></div>
+          <div className="brand-title" role="heading" aria-level={1}><span className="by">From Your</span> <em ref={garageRef}>GARAGE</em></div>
           <div className="hero-copy">
             <span><img className="logo logo-amazon_white" src="/assets/amazon_white.svg" alt="아마존" />도, <img className="logo logo-google" src="/assets/google.svg" alt="구글" />도 작은 차고에서 시작했죠.</span>
             <span>당신의 브랜드도 여기서 시작되길 바라요.</span>
@@ -231,8 +248,8 @@ export default function App() {
           {D.HOME_STEPS.map(([k, t], n) => <div className="step-card" key={k}><b>STEP {n + 1}</b>{t}<span dangerouslySetInnerHTML={{ __html: ICONS[k] }} /></div>)}
         </div>
       </div>
-      <p className="caption">미리 생각해 두면 좋아요: 관심을 갖게 된 계기 · 도와주고 싶은 사람 · 다르게 하고 싶은 점 (잘 몰라도 괜찮아요)</p>
-      <div className="btn-gap"><button className="btn primary start" onClick={() => up({ step: 1 })}>준비됐어요, 시작할게요</button></div>
+      <p className="caption center">미리 생각해 두면 좋아요: 관심을 갖게 된 계기 · 도와주고 싶은 사람 · 다르게 하고 싶은 점 (잘 몰라도 괜찮아요)</p>
+      <div className="btn-gap center"><button className="btn primary start" onClick={() => up({ step: 1 })}>준비됐어요, 시작할게요</button></div>
     </>
   );
 
@@ -615,7 +632,7 @@ export default function App() {
     <main className="container">
       {/* 셔터는 등장 효과(transform)가 걸린 상자 밖에 둬야 화면 전체를 덮음 (안에 두면 가운데 상자 폭만큼만 그려져 글자가 잘림) */}
       {!introSeen && page === "브랜드 코칭" && s.step === 0 &&
-        <div className="intro" aria-hidden="true"><div className="mq"><span className="g"><span className="pre">FROM YOUR&nbsp;</span>GARAGE</span></div></div>}
+        <div className="intro" aria-hidden="true" style={garagePos}><div className="mq"><span className="g"><span className="pre">FROM YOUR&nbsp;</span>GARAGE</span></div></div>}
       {fake && <div className="test-banner">테스트 모드: AI를 부르지 않고 예시 답을 보여줘요 (비용 0원). 끄려면 환경 변수 FAKE_AI를 지우세요.</div>}
       <nav className="menu" aria-label="메뉴">
         {PAGES.map(p => <button key={p} className={p === page ? "on" : ""} aria-current={p === page} onClick={() => setPage(p)}>{p}</button>)}
