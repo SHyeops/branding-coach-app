@@ -11,7 +11,7 @@ import {
 type Page = "브랜드 코칭" | "활용 템플릿" | "브랜드 스토리" | "1:1 멘토링";
 const PAGES: Page[] = ["브랜드 코칭", "활용 템플릿", "브랜드 스토리", "1:1 멘토링"];
 const STEPS = ["기본 정보", "생각 정리", "첫인상", "확인", "리포트"];
-const ITEMS: [string, string][] = [["type", "브랜드 유형"], ["names", "이름 후보"], ["customer", "주요 고객층"], ["pain", "고객의 고민"], ["mission", "미션"], ["message", "핵심 메시지"],
+const ITEMS: [string, string][] = [["type", "브랜드 유형"], ["names", "이름 후보"], ["edge", "나만의 차별점"], ["story", "내 브랜드 이야기"], ["customer", "주요 고객층"], ["pain", "고객의 고민"], ["mission", "미션"], ["message", "핵심 메시지"],
   ["slogans", "슬로건"], ["personality", "성격·말투"], ["strategy", "판매 전략"], ["color", "아이덴티티 컬러"], ["mood", "무드 키워드"],
   ["like", "닮은 브랜드"], ["todo", "이번 주 할 일"], ["advice", "더 생각해 볼 것"]];
 const WIDE_LOGO = new Set(["amazon", "samsung"]); // 글자형 로고는 넓게
@@ -400,6 +400,7 @@ export default function App() {
     }
     const v = it.value;
     if (k === "values" || k === "mood") return <div className="sv-chips">{asList(v).map((x, i) => <span key={i}>{String(x)}</span>)}</div>;
+    if (k === "edge") return <ol className="sv-list">{asList(v).map((x, i) => <li key={i}>{String(x)}</li>)}</ol>;
     if (k === "advice") return <ul className="sv-list">{asList(v).map((x, i) => <li key={i}>{String(x)}</li>)}</ul>;
     if (k === "todo") return <ol className="sv-list">{asList(v).map((x, i) => <li key={i}>{String(x)}</li>)}</ol>;
     return (

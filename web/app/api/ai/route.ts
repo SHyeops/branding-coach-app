@@ -23,14 +23,14 @@ function fakeAnswer(name: PromptName, s: St) {
     const d: Record<string, Record<string, unknown>> = Object.fromEntries(Object.entries(D.SHEET_LABELS).map(([k, l]) => [k, item(`(예시) ${l}`)]));
     for (const [k, n] of [["mission", 2], ["message", 2], ["slogans", 3]] as const)
       d[k] = { options: Array.from({ length: n }, (_, j) => `(예시) ${D.SHEET_LABELS[k]} ${j + 1}안`), why: "(테스트 모드 예시) 두 방향이에요.", quotes: [a] };
-    for (const k of ["values", "mood", "todo", "advice"]) d[k].value = [1, 2, 3].map(j => `예시 ${j}`);
+    for (const k of ["values", "mood", "todo", "advice", "edge"]) d[k].value = [1, 2, 3].map(j => `예시 ${j}`);
     if (s.nameTbd) d.names = { options: ["(예시) 이름 1안", "(예시) 이름 2안", "(예시) 이름 3안"], why: "(테스트 모드 예시) 이름 후보예요.", quotes: [a] };
     d.personality.example = "오늘도 정성껏 준비했어요.";
     d.strategy.points = ["채널: 인스타그램", "가격: 예시", "첫 손님: 예시"];
     return JSON.stringify(d);
   }
   if (name === "TEMPLATE") return `### 예시 항목 1\n(테스트 모드 예시) ${s.name} 문구예요.\n두 번째 줄이에요.\n\n### 예시 항목 2\n(테스트 모드 예시) ${a}`;
-  if (name === "REFLECT") return `### 이 브랜드가 정말 하려는 일\n(테스트 모드 예시) ${a}\n\n### 첫인상\n${(s.traits ?? []).join(", ")}\n\n> 생각해 볼 질문: (테스트 모드 예시)`;
+  if (name === "REFLECT") return `### 이 브랜드만 가진 것\n(테스트 모드 예시) ${a}\n\n### 첫인상\n${(s.traits ?? []).join(", ")}\n\n> 생각해 볼 질문: (테스트 모드 예시)`;
   return "(테스트 모드 예시) 조금 더 들려주세요. 예를 들면 그때 어떤 상황이었는지, 누가 떠올랐는지요.";
 }
 
