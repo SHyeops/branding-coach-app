@@ -155,7 +155,7 @@ h2.page-h { font-size: clamp(30px, 4vw, 48px); line-height: 1.15; font-weight: 8
 .field textarea { min-height: 96px; resize: vertical; }
 .field input:focus, .field textarea:focus { border-color: var(--ink); box-shadow: 0 0 0 3px #ffffff1f; }
 .field ::placeholder { color: #777; }
-.check { display: flex; gap: 8px; align-items: center; margin: -.4rem 0 1rem; font-size: 1rem; color: var(--ink-2, #a3a3a3); cursor: pointer; }
+.check { display: flex; gap: 8px; align-items: center; margin: .7rem 0 1.4rem; font-size: 1rem; color: var(--ink-2, #a3a3a3); cursor: pointer; }
 .check input { width: 18px; height: 18px; accent-color: var(--pink); }
 
 /* 선택지: 카드처럼 (떠오를 공간 = 위 여백) */
@@ -272,6 +272,7 @@ h2.page-h { font-size: clamp(30px, 4vw, 48px); line-height: 1.15; font-weight: 8
 .res-item.sel { border-color: var(--amber); background: #ffb02e12; }
 .sl { font-size: .85rem; font-weight: 700; letter-spacing: .06em; color: var(--amber); margin-bottom: 8px; }
 .sv-main { font-size: 1.2rem; font-weight: 700; line-height: 1.5; color: var(--ink); }
+.sv-story { font-size: 1.02rem; line-height: 1.75; color: var(--ink); }
 .sv-sub { margin-top: 4px; color: var(--ink-2); line-height: 1.5; }
 .sv-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .sv-chips span { padding: .35rem .85rem; border-radius: 999px; font-weight: 600; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line-2); }

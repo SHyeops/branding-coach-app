@@ -400,6 +400,7 @@ export default function App() {
     }
     const v = it.value;
     if (k === "values" || k === "mood") return <div className="sv-chips">{asList(v).map((x, i) => <span key={i}>{String(x)}</span>)}</div>;
+    if (k === "story") return <div className="sv-story"><Soft t={v} /></div>;
     if (k === "edge") return <ol className="sv-list">{asList(v).map((x, i) => <li key={i}>{String(x)}</li>)}</ol>;
     if (k === "advice") return <ul className="sv-list">{asList(v).map((x, i) => <li key={i}>{String(x)}</li>)}</ul>;
     if (k === "todo") return <ol className="sv-list">{asList(v).map((x, i) => <li key={i}>{String(x)}</li>)}</ol>;
