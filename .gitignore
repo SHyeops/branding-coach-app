@@ -3,3 +3,6 @@ __pycache__/
 .venv/
 .DS_Store
 .streamlit/secrets.toml
+
+# 설문 원본 응답 (개인정보 가능성) — GitHub에 올리지 않음
+survey_raw/
