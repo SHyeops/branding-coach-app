@@ -70,7 +70,7 @@ function makeState(id: string): St {
 
 async function ask(name: string, s: St, extra: Record<string, string> = {}) {
   const t0 = Date.now();
-  const state = { step: s.step, kind: s.kind, name: s.name, desc: s.desc, memo: s.memo, answers: s.answers, picks: s.picks, notes: s.notes, traits: s.traits, tone: s.tone, fix: s.fix };
+  const state = { step: s.step, kind: s.kind, name: s.name, nameTbd: s.nameTbd, desc: s.desc, memo: s.memo, answers: s.answers, picks: s.picks, notes: s.notes, traits: s.traits, tone: s.tone, fix: s.fix };
   const j = await (await fetch(`${BASE}/api/ai`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, state, extra }) })).json();
   if (j.error) throw new Error(`${name}: ${j.error}`);
   return { text: j.text as string, sec: Math.round((Date.now() - t0) / 1000) };
@@ -78,6 +78,7 @@ async function ask(name: string, s: St, extra: Record<string, string> = {}) {
 
 async function run(id: string) {
   let s = makeState(id);
+  if (process.env.NAME_TBD?.split(",").includes(id)) s.nameTbd = true; // 이름 후보(가칭) 확인용
   const log: string[] = [], sec: Record<string, number> = {};
   const sc5 = D.SCENES[s.kind][5], note5 = s.notes[5];
   if (note5.length < D.MIN_LEN) { // 앱과 같이: 장면 6 답이 짧으면 추가 질문 1번 (사용자는 그대로 넘어간다고 가정)
@@ -114,7 +115,7 @@ async function run(id: string) {
     `\n## 입력 (가상 사용자)\n\`\`\`\n${infoText(s)}\n\`\`\``,
     ...log, `## 이해한 내용 (REFLECT)\n${s.reflect}`,
     `## 브랜드 아이덴티티 시트\n${sheetText(s)}`,
-    `## 상세 (why)\n${Object.entries(D.SHEET_LABELS).map(([k, l]) => `### ${l}\n${String(sheet[k]?.why ?? "")}\n- 인용: ${asList(sheet[k]?.quotes).join(" / ")}`).join("\n\n")}`,
+    `${sheet.names ? `이름 후보: ${asList(sheet.names.options).join(" / ")}\n이름 이유: ${String(sheet.names.why ?? "")}\n\n` : ""}## 상세 (why)\n${Object.entries(D.SHEET_LABELS).map(([k, l]) => `### ${l}\n${String(sheet[k]?.why ?? "")}\n- 인용: ${asList(sheet[k]?.quotes).join(" / ")}`).join("\n\n")}`,
     `## 컬러\n${s.palettes.map(p => `- ${p.name}: ${p.colors.map(x => `${x.hex}(${x.role})`).join(" ")} — ${p.why}`).join("\n")}`,
     `## 활용 템플릿 (${ch})\n${t.text}`,
   ].join("\n\n"));

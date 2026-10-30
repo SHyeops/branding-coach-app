@@ -11,7 +11,7 @@ import {
 type Page = "브랜드 코칭" | "활용 템플릿" | "브랜드 스토리" | "1:1 멘토링";
 const PAGES: Page[] = ["브랜드 코칭", "활용 템플릿", "브랜드 스토리", "1:1 멘토링"];
 const STEPS = ["기본 정보", "생각 정리", "첫인상", "확인", "리포트"];
-const ITEMS: [string, string][] = [["type", "브랜드 유형"], ["customer", "주요 고객층"], ["pain", "고객의 고민"], ["mission", "미션"], ["message", "핵심 메시지"],
+const ITEMS: [string, string][] = [["type", "브랜드 유형"], ["names", "이름 후보"], ["customer", "주요 고객층"], ["pain", "고객의 고민"], ["mission", "미션"], ["message", "핵심 메시지"],
   ["slogans", "슬로건"], ["personality", "성격·말투"], ["strategy", "판매 전략"], ["color", "아이덴티티 컬러"], ["mood", "무드 키워드"],
   ["like", "닮은 브랜드"], ["todo", "이번 주 할 일"], ["advice", "더 생각해 볼 것"]];
 const WIDE_LOGO = new Set(["amazon", "samsung"]); // 글자형 로고는 넓게
@@ -25,7 +25,7 @@ const ICONS: Record<string, string> = {
 
 /** AI 호출 (서버 /api/ai). 실패해도 화면이 멈추지 않게 [결과, 오류문구] */
 async function askAI(name: PromptName, s: St, extra: Record<string, string> = {}): Promise<[string | null, string | null]> {
-  const state = { step: s.step, kind: s.kind, name: s.name, desc: s.desc, memo: s.memo, answers: s.answers, picks: s.picks, notes: s.notes, traits: s.traits, tone: s.tone, fix: s.fix };
+  const state = { step: s.step, kind: s.kind, name: s.name, nameTbd: s.nameTbd, desc: s.desc, memo: s.memo, answers: s.answers, picks: s.picks, notes: s.notes, traits: s.traits, tone: s.tone, fix: s.fix };
   try {
     const r = await fetch("/api/ai", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, state, extra }) });
     const j = await r.json();
@@ -262,6 +262,7 @@ export default function App() {
         <span className="radio-label">형태</span>
         <Radios two options={["상품", "서비스"]} value={s.kind} onChange={k => up({ kind: k as Kind })} fmt={k => (k === "서비스" ? "서비스 (레슨·클래스·코칭 포함)" : k)} />
         <label className="field"><span>이름</span><input value={s.name} placeholder={ex.name} onChange={e => up({ name: e.target.value })} /></label>
+        <label className="check"><input type="checkbox" checked={!!s.nameTbd} onChange={e => up({ nameTbd: e.target.checked })} /> 아직 이름이 정해지지 않았어요 (가칭) — 리포트에서 이름 후보를 받아요</label>
         <label className="field"><span>한 줄 설명</span><textarea value={s.desc} placeholder={ex.desc} onChange={e => up({ desc: e.target.value })} /></label>
         <label className="field"><span>(선택) 이미 구상 중인 내용이 있다면 자유롭게 적어 주세요</span><textarea value={s.memo} placeholder={ex.memo} onChange={e => up({ memo: e.target.value })} /></label>
         <ExagNote text={`${s.name}\n${s.desc}\n${s.memo}`} />
@@ -455,6 +456,7 @@ export default function App() {
       <div className="why-text">{String(it.why ?? "")}</div>
       {qs.length > 0 && <div className="why-quotes"><b>근거가 된 내 선택·내 말</b><Postits items={qs} /></div>}
       {bad.length > 0 && <div className="alert warning">이 인용은 내 입력과 그대로 일치하지 않아요: {bad.join(" / ")}</div>}
+      {k === "names" && <p className="caption">쓰기 전에 <a href="https://www.kipris.or.kr" target="_blank" rel="noreferrer">키프리스(특허청 상표 검색)</a>와 SNS·도메인에서 같은 이름이 있는지 꼭 확인하세요. 앱은 이미 있는 이름인지 확인하지 못해요.</p>}
       <p className="caption">이건 AI의 해석이에요. 내 생각과 다른 부분은 덜어 내고 보세요. 판단은 내 몫이에요.</p>
     </>;
   };
@@ -477,7 +479,7 @@ export default function App() {
         </div>
         <div className="res-grid">
           <div className="res-list">
-            {ITEMS.map(([k, label]) => (
+            {ITEMS.filter(([k]) => k !== "names" || s.sheet?.names).map(([k, label]) => (
               <div key={k} className={`res-item${k === sel ? " sel" : ""}`}>
                 <div className="sl">{label}</div>
                 {sheetValue(k)}

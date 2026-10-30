@@ -18,7 +18,7 @@ export type Sheet = Record<string, Item>;
 export type Palette = { name?: string; colors: { hex: string; role?: string }[]; why?: string; quote?: string; fallback?: boolean };
 
 export type St = {
-  step: number; q: number; kind: Kind; name: string; desc: string; memo: string;
+  step: number; q: number; kind: Kind; name: string; nameTbd?: boolean; desc: string; memo: string;
   answers: string[]; picks: string[][]; notes: string[]; asked_more: boolean[]; more: string[];
   traits?: string[]; tone?: string; fix?: string; reflect?: string;
   sheet?: Sheet | null; palettes?: Palette[]; pal: number; brief?: string; err?: string | null;
@@ -79,7 +79,7 @@ export function answerText(chosen: string[], note: string) {
 
 export function infoText(s: St) {
   const qa = D.SCENES[s.kind].map((sc, i) => `- [${sc.group}] ${sc.ask}: ${s.answers[i] ?? ""}`).join("\n");
-  let out = `[사용자 정보]\n형태: ${s.kind}\n이름: ${s.name}\n설명: ${s.desc}\n구상 메모(참고용): ${s.memo.trim() || "(없음)"}\n질문과 답변:\n${qa}`;
+  let out = `[사용자 정보]\n형태: ${s.kind}\n이름: ${s.name}${s.nameTbd ? " (가칭 — 이름 후보 제안 필요)" : ""}\n설명: ${s.desc}\n구상 메모(참고용): ${s.memo.trim() || "(없음)"}\n질문과 답변:\n${qa}`;
   if (s.traits?.length) out += `\n사용자가 고른 성향: ${s.traits.join(", ")}\n사용자가 고른 말투 예시: ${s.tone ?? "(없음)"}`;
   if (s.step >= 4) {
     const [bt] = brandType(s.kind, s.picks);

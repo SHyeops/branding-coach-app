@@ -24,6 +24,7 @@ function fakeAnswer(name: PromptName, s: St) {
     for (const [k, n] of [["mission", 2], ["message", 2], ["slogans", 3]] as const)
       d[k] = { options: Array.from({ length: n }, (_, j) => `(예시) ${D.SHEET_LABELS[k]} ${j + 1}안`), why: "(테스트 모드 예시) 두 방향이에요.", quotes: [a] };
     for (const k of ["values", "mood", "todo", "advice"]) d[k].value = [1, 2, 3].map(j => `예시 ${j}`);
+    if (s.nameTbd) d.names = { options: ["(예시) 이름 1안", "(예시) 이름 2안", "(예시) 이름 3안"], why: "(테스트 모드 예시) 이름 후보예요.", quotes: [a] };
     d.personality.example = "오늘도 정성껏 준비했어요.";
     d.strategy.points = ["채널: 인스타그램", "가격: 예시", "첫 손님: 예시"];
     return JSON.stringify(d);
