@@ -50,7 +50,7 @@ BG, INK, INK2, PINK, AMB, RED = "#0f0f0f", "#f5f5f5", "#a3a3a3", "#ff3d9a", "#ff
 F = "'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif"
 M = "ui-monospace,'SF Mono',Menlo,monospace"
 STY = {  # 카드 배경, 테두리, 대시, 꼬리표 색
-    "done": ("#1f1f1f", "none", "", INK2), "ahead": ("rgba(255,61,154,0.14)", PINK, "", PINK),
+    "done": ("#1f1f1f", "none", "", INK2), "ahead": ("#1f1f1f", "none", "", INK2),  # 미리 끝낸 일도 끝난 일과 같은 색 (사용자 요청: 헷갈림)
     "doing": ("none", AMB, "", AMB), "early": ("none", PINK, "5,4", PINK),
     "today": ("none", AMB, "5,4", AMB), "todo": ("none", "rgba(255,255,255,0.28)", "5,4", INK2),
     "late": ("rgba(255,107,107,0.10)", RED, "", RED),
