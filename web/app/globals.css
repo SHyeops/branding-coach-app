@@ -203,6 +203,7 @@ h2.page-h { font-size: clamp(30px, 4vw, 48px); line-height: 1.15; font-weight: 8
 .md h3 { font-size: 1.25rem; margin: .9rem 0 .2rem; color: var(--amber); }
 .md ul { margin: .2rem 0; padding-left: 1.3em; }
 .md li { font-size: 1.05rem; }
+.md blockquote { margin: 1rem 0 0; padding: .6rem .9rem; border-left: 3px solid var(--pink); background: rgba(255,61,154,.08); }
 
 /* 컬러 칩 */
 .pal-name { font-weight: 700; margin: 0 0 .5rem; }

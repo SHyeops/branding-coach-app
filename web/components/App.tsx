@@ -52,7 +52,7 @@ function Md({ text }: { text: string }) {
   text.split("\n").forEach((raw, i) => {
     const l = raw.trim();
     if (/^-\s+/.test(l)) list.push(<li key={i}>{bold(l.replace(/^-\s+/, ""))}</li>);
-    else { flush(); if (/^#{1,3}\s/.test(l)) out.push(<h3 key={i}>{l.replace(/^#+\s*/, "")}</h3>); else if (l) out.push(<p key={i}>{bold(l)}</p>); }
+    else { flush(); if (/^#{1,3}\s/.test(l)) out.push(<h3 key={i}>{l.replace(/^#+\s*/, "")}</h3>); else if (/^>\s*/.test(l)) out.push(<blockquote key={i}>{bold(l.replace(/^>\s*/, ""))}</blockquote>); else if (l) out.push(<p key={i}>{bold(l)}</p>); }
   });
   flush();
   return <div className="md">{out}</div>;
@@ -365,8 +365,8 @@ export default function App() {
   // ───────── 4. 확인 ─────────
   const confirm = () => (
     <>
-      <h2 className="page-h">제가 이해한 내용</h2>
-      <p className="caption">제가 이해한 내용이 맞는지 확인해 주세요. 다르면 아래에 고칠 점을 적어 주시면 다시 정리할게요.</p>
+      <h2 className="page-h">코치가 읽은 내 브랜드</h2>
+      <p className="caption">고른 것과 쓴 말을 엮어 읽어 봤어요. 내 생각과 다르면 아래에 적어 주세요. 다시 읽어 볼게요.</p>
       {busy === "reflect" && <div className="loading">정리하고 있어요…</div>}
       {s.err ? (
         <><div className="alert error">{s.err}</div><button className="btn" onClick={() => up({ err: null, reflect: undefined })}>다시 시도</button></>
