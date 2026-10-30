@@ -1,5 +1,5 @@
 "use client";
-// From Your Garage — 화면 전체 (Streamlit app.py에서 옮김). 메뉴: 브랜드 코칭(0 홈 → 1 기본 정보 → 2 장면 6개 → 3 간판 → 4 확인 → 5 결과) / 활용 템플릿 / 브랜드 스토리 / 1:1 멘토링
+// From Your Garage — 화면 전체 (Streamlit app.py에서 옮김). 메뉴: 브랜드 코칭(0 홈 → 1 기본 정보 → 2 장면 6개 → 3 첫인상 → 4 확인 → 5 결과) / 활용 템플릿 / 브랜드 스토리 / 1:1 멘토링
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import demoData from "@/lib/demo_P02.json";
 import {
@@ -10,7 +10,7 @@ import {
 
 type Page = "브랜드 코칭" | "활용 템플릿" | "브랜드 스토리" | "1:1 멘토링";
 const PAGES: Page[] = ["브랜드 코칭", "활용 템플릿", "브랜드 스토리", "1:1 멘토링"];
-const STEPS = ["기본 정보", "생각 정리", "간판", "확인", "리포트"];
+const STEPS = ["기본 정보", "생각 정리", "첫인상", "확인", "리포트"];
 const ITEMS: [string, string][] = [["type", "브랜드 유형"], ["customer", "주요 고객층"], ["pain", "고객의 고민"], ["mission", "미션"], ["message", "핵심 메시지"],
   ["slogans", "슬로건"], ["personality", "성격·말투"], ["strategy", "판매 전략"], ["color", "아이덴티티 컬러"], ["mood", "무드 키워드"],
   ["like", "닮은 브랜드"], ["todo", "이번 주 할 일"], ["advice", "더 생각해 볼 것"]];
@@ -325,7 +325,7 @@ export default function App() {
     );
   };
 
-  // ───────── 3. 간판 ─────────
+  // ───────── 3. 첫인상 (성향·말투) ─────────
   const signboard = () => {
     const ex = Object.fromEntries(D.TRAITS.flatMap(pair => pair)) as Record<string, string>;
     const tones = s.traits ? D.TONES[`${s.traits[0]}|${s.traits[1]}`] : [];
@@ -334,11 +334,11 @@ export default function App() {
       <>
         <Wall name={s.name} items={[...wallItems(s, N), ...(s.traits ?? [])]} />
         <div className="scene-head"><span className="day">GARAGE DAY 1 · 마지막 장면</span><Bulbs lit={N} /></div>
-        <p className="scene">벽을 가득 채운 포스트잇을 본다. 이제 간판을 상상해 볼 차례.</p>
-        <div className="ask">“내 가게 간판은 어떤 느낌일까?”</div>
+        <p className="scene">벽을 가득 채운 포스트잇을 본다. 이 생각들이 사람들에게 어떤 느낌으로 닿을지 떠올려 볼 차례.</p>
+        <div className="ask">“사람들이 내 브랜드를 처음 만났을 때, 어떤 느낌이면 좋을까?”</div>
         {!s.traits ? (
           <>
-            <p className="caption">1단계 · 둘 중 내 간판에 더 가까운 쪽을 골라 주세요. 정답은 없어요.</p>
+            <p className="caption">1단계 · 둘 중 내 브랜드에 더 가까운 쪽을 골라 주세요. 정답은 없어요.</p>
             {D.TRAITS.map(([a, b], k) => (
               <div key={k}>
                 <span className="radio-label">{a[0]} vs {b[0]}</span>
@@ -350,7 +350,7 @@ export default function App() {
         ) : (
           <>
             <p className="caption">1단계에서 고른 성향: {s.traits.join(" · ")}</p>
-            <p className="caption">2단계 · 간판 아래 붙일 한마디라면? 내 브랜드가 할 법한 말투를 하나 골라 주세요. (말투 예시일 뿐, 내용은 내 답변으로 채워져요)</p>
+            <p className="caption">2단계 · 처음 인사할 때 건넬 한마디라면? 내 브랜드가 할 법한 말투를 하나 골라 주세요. (말투 예시일 뿐, 내용은 내 답변으로 채워져요)</p>
             <Radios options={tones} value={tone} onChange={setTonePick} />
             <div className="btn-row">
               <button className="btn" onClick={() => up({ traits: undefined })}>성향 다시 고르기</button>
