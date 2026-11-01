@@ -58,10 +58,24 @@ STY = {  # 카드 배경, 테두리, 대시, 꼬리표 색
 }
 
 
+def wrap(s, maxw=124):
+    """카드 안 글자 줄바꿈: 한글 13px, 그 외 7.5px로 어림잡아 maxw를 넘으면 다음 줄"""
+    lines, cur, w = [], "", 0
+    for ch in s:
+        cw = 13 if ord(ch) > 0x2000 else 7.5
+        if w + cw > maxw and cur:
+            lines.append(cur); cur, w = "", 0
+        cur += ch; w += cw
+    return lines + [cur]
+
+
 def render(ts, today, src):
     W, LW, CW, TOP, CH, GAP = 1200, 24, 192, 104, 52, 8
-    n = max(sum(t["plan"] == d for t in ts) for d, _, _ in DAYS)
-    H = TOP + n * (CH + GAP) + 64
+    name = lambda t: t["name"] + (" 👥" if t["people"] else "")
+    ch = lambda t: CH + 17 * (len(wrap(name(t))) - 1)  # 이름 줄 수만큼 카드 높이 늘림
+    colh = max(sum(ch(t) + GAP for t in ts if t["plan"] == d) for d, _, _ in DAYS)
+    n = colh / (CH + GAP)
+    H = TOP + colh + 64
     o = [f'<defs><pattern id="hatch" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'
          f'<line x1="0" y1="0" x2="0" y2="8" stroke="rgba(255,255,255,0.08)" stroke-width="2"/></pattern>'
          f'<marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="{INK2}"/></marker></defs>',
@@ -84,20 +98,24 @@ def render(ts, today, src):
             o.append(f'<text x="{bx + bw // 2}" y="{cy - 6}" text-anchor="middle" font-family="{F}" font-size="13" font-weight="600" fill="{INK2}">개인 일정</text>')
             o.append(f'<text x="{bx + bw // 2}" y="{cy + 14}" text-anchor="middle" font-family="{F}" font-size="12" fill="{INK2}">작업 없음</text>')
             continue
-        for i, t in enumerate([t for t in ts if t["plan"] == d]):
+        y = TOP
+        for t in [t for t in ts if t["plan"] == d]:
             k, tag = status(t, today)
             fill, stroke, dash, tc = STY[k]
-            y = TOP + i * (CH + GAP)
-            o.append(f'<rect x="{bx}" y="{y}" width="{bw}" height="{CH}" rx="6" fill="{fill}" stroke="{stroke}"' + (f' stroke-dasharray="{dash}"' if dash else "") + "/>")
+            lines = wrap(name(t))
+            o.append(f'<rect x="{bx}" y="{y}" width="{bw}" height="{ch(t)}" rx="6" fill="{fill}" stroke="{stroke}"' + (f' stroke-dasharray="{dash}"' if dash else "") + "/>")
             o.append(f'<text x="{bx + 10}" y="{y + 21}" font-family="{M}" font-size="11" fill="{INK2}">{t["id"]}</text>')
-            o.append(f'<text x="{bx + 42}" y="{y + 21}" font-family="{F}" font-size="13" font-weight="600" fill="{"#6b6b6b" if k == "skip" else INK}"' + (' text-decoration="line-through"' if k == "skip" else "") + f'>{e(t["name"])}{" 👥" if t["people"] else ""}</text>')
-            o.append(f'<text x="{bx + 42}" y="{y + 41}" font-family="{F}" font-size="12" fill="{tc}">{e(tag)}</text>')
+            o.append(f'<text x="{bx + 42}" y="{y + 21}" font-family="{F}" font-size="13" font-weight="600" fill="{"#6b6b6b" if k == "skip" else INK}"' + (' text-decoration="line-through"' if k == "skip" else "") + ">" + "".join(f'<tspan x="{bx + 42}" dy="{0 if j == 0 else 17}">{e(l)}</tspan>' for j, l in enumerate(lines)) + "</text>")
+            o.append(f'<text x="{bx + 42}" y="{y + ch(t) - 11}" font-family="{F}" font-size="12" fill="{tc}">{e(tag)}</text>')
+            y += ch(t) + GAP
     lg = [("■ 회색 ✓ = 계획한 날에 끝", INK2), ("■ 분홍 ⏩ = 계획보다 먼저 끝", PINK), ("┅ 분홍 ◐ = 미리 시작", PINK),
           ("┅ 노랑 ○ = 남은 일", AMB), ("■ 빨강 ⚠ = 늦음", RED), ("👥 = 다른 사람 필요(평일만)", INK2), ("취소선 = 제외", INK2)]
-    xx = 24
+    xx, yy = 24, H - 40
     for t, c in lg:
-        o.append(f'<text x="{xx}" y="{H - 24}" font-family="{F}" font-size="12" fill="{c}">{e(t)}</text>')
-        xx += 32 + len(t) * 10
+        w = sum(12 if ord(x) > 0x2000 else 7 for x in t) + 24
+        if xx + w > W: xx, yy = 24, yy + 18
+        o.append(f'<text x="{xx}" y="{yy}" font-family="{F}" font-size="12" fill="{c}">{e(t)}</text>')
+        xx += w
     svg = (f'<svg viewBox="0 0 {W} {H}" width="{W}" height="{H}" role="img" aria-labelledby="progress-board-title progress-board-desc" xmlns="http://www.w3.org/2000/svg">\n'
            f'<title id="progress-board-title">1차 프로젝트 진행 체크판</title>\n'
            f'<desc id="progress-board-desc">고정한 기준 일정의 할 일을 계획한 날짜 칸에 두고, 실제로 끝낸 날짜와 비교해 앞당김, 계획대로, 늦음, 남은 일을 표시한다.</desc>\n'
@@ -145,6 +163,7 @@ if __name__ == "__main__":
     assert status(T("11/2", "진행 10/30"), "10/30")[0] == "early"
     assert status(T("10/30", ""), "10/30")[0] == "today"
     assert status(T("10/30", "제외"), "11/2")[0] == "skip"
+    assert wrap("가나다라마바사아자차카타파하") == ["가나다라마바사아자", "차카타파하"]
     assert all(x["plan"] in WORK for x in ts), "계획일은 작업하는 날만"
     assert not any(x["people"] and x["plan"] == "11/1" for x in ts), "👥 일은 주말 금지"
     out = Path("results/progress/진행체크판.html")
