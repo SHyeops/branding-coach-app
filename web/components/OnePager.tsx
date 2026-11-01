@@ -16,28 +16,41 @@ const list = (xs: unknown[]) => <ul style={{ margin: "2px 0", paddingLeft: 18 }}
 export default function OnePager({ s, bt }: { s: St; bt: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<"" | "busy" | "err">("");
+  const [img, setImg] = useState<{ url: string; file: File } | null>(null);
   if (!s.sheet) return null;
   const sh = s.sheet, pal = s.palettes?.[s.pal] ?? s.palettes?.[0];
   const val = (key: string) => asList(sh[key]?.value);
+  const fname = `${s.name || "내 브랜드"}_브랜드가이드.png`;
 
-  const save = async () => {
+  const make = async () => {
     if (!ref.current) return;
     setState("busy");
     try {
       // skipFonts: 외부 글꼴 CSS를 읽다 막히는 브라우저가 있어, 기기에 있는 글꼴로 그림
       const url = await toPng(ref.current, { pixelRatio: 2, skipFonts: true, backgroundColor: "#f4f2ee" });
-      const a = document.createElement("a");
-      a.href = url; a.download = `${s.name || "내 브랜드"}_브랜드가이드.png`; a.click();
-      setState("");
+      const file = new File([await (await fetch(url)).blob()], fname, { type: "image/png" });
+      setImg({ url, file }); setState("");
     } catch { setState("err"); }
   };
+  // 공유 창은 누른 직후에만 열려서(사파리) 이미지를 먼저 만들어 두고 따로 누르게 함
+  const canShare = !!img && typeof navigator !== "undefined" && !!navigator.canShare?.({ files: [img.file] });
+  const share = () => img && navigator.share({ files: [img.file], title: fname }).catch(() => {});
+  const download = () => { if (!img) return; const a = document.createElement("a"); a.href = img.url; a.download = fname; a.click(); };
 
   return (
     <div className="box">
       <b>내 브랜드 가이드 한 장으로 저장하기</b>
       <p className="caption">내가 한 말과 추천 방향을 이미지 한 장으로 모았어요. 휴대폰 사진첩에 두고 볼 수 있어요.</p>
-      <button className="btn primary" disabled={state === "busy"} onClick={save}>{state === "busy" ? "이미지 만드는 중…" : "이미지로 저장 (PNG)"}</button>
+      {!img && <button className="btn primary" disabled={state === "busy"} onClick={make}>{state === "busy" ? "이미지 만드는 중…" : "이미지 만들기"}</button>}
       {state === "err" && <div className="alert error">이미지를 만들지 못했어요. 다시 눌러 주세요. 계속 안 되면 화면을 캡처해 주세요.</div>}
+      {img && <>
+        <img src={img.url} alt={`${s.name} 브랜드 가이드`} style={{ width: "100%", borderRadius: 10, margin: "8px 0", display: "block" }} />
+        <p className="caption">휴대폰에서는 <b>사진첩에 저장</b>을 누르고 공유 창에서 &apos;이미지 저장&apos;(아이폰)이나 갤러리(안드로이드)를 고르세요. 안 되면 이미지를 <b>길게 눌러</b> 저장할 수 있어요.</p>
+        <div className="btn-row">
+          {canShare && <button className="btn primary" onClick={share}>사진첩에 저장 / 공유</button>}
+          <button className={canShare ? "btn" : "btn primary"} onClick={download}>파일로 내려받기</button>
+        </div>
+      </>}
 
       {/* 저장용 원본: 화면 밖에 1200px로 그려 두고 이미지로 바꿈 (휴대폰에서도 같은 모양) */}
       <div style={{ position: "fixed", left: -10000, top: 0 }} aria-hidden="true">
