@@ -1,5 +1,5 @@
 "use client";
-// 차별점 찾기 탭: 늘어놓기 → 엮어 보기 → 버리기 → 남은 것. AI 없이 사용자가 직접 (차고 벽에 종이를 붙이고, 실로 잇고, 구겨 버림)
+// 차별점 찾기 탭: 늘어놓기 → 엮어 보기 → 버리기 → 고르기. AI 없이 사용자가 직접 (차고 벽에 종이를 붙이고, 실로 잇고, 구겨 버림)
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent as PE } from "react";
 
 type Note = { id: number; text: string; cat: string; combo?: [string, string]; star?: boolean };
@@ -11,9 +11,11 @@ const STEPS = [
   { t: "늘어놓기", h: "할 줄 아는 것, 좋아하는 것, 겪은 일을 사소한 것까지 벽에 붙여요. 10장이 목표예요." },
   { t: "엮어 보기", h: "종이 하나를 누른 채 보드마카로 다른 종이까지 선을 그어 보세요(두 장을 차례로 눌러도 돼요). 둘을 합치면 어떤 일이 되나요? 예) 회계 경력 + 베이킹 → 원가를 공개하는 빵집" },
   { t: "버리기", h: "하기 싫은 것, 같은 걸 파는 3곳도 똑같이 말할 수 있는 것을 눌러 구겨 버려요. 쓰레기통을 누르면 되살아나요." },
-  { t: "남은 것", h: "벽에 남은 것이 내 차별점 후보예요. 가장 마음에 드는 것에 별을 붙이고(3개까지) 확인해 보세요." },
+  { t: "고르기", h: "벽에 남은 종이가 내 차별점 후보예요. 가장 마음에 드는 것을 눌러 별을 붙이고(3개까지), 아래 방법으로 이번 주에 확인해 보세요." },
 ];
 const KEY = "fyg-edge-lab";
+// 쓰레기통 속 종이 공 자리 [left, bottom] px: 아래 줄은 통 안에 반쯤 잠기고, 많아지면 위로 넘쳐 쌓임
+const PILE = [[6, 50], [22, 52], [38, 50], [14, 63], [31, 64], [46, 60], [-3, 61], [22, 76], [6, 80]];
 const empty: Saved = { notes: [], trash: [], step: 0, next: 1 };
 
 export default function EdgeLab({ seeds }: { seeds: string[] }) {
@@ -138,8 +140,10 @@ export default function EdgeLab({ seeds }: { seeds: string[] }) {
           {drag && <><path className="ink" d={`M${drag.x0} ${drag.y0} L${drag.x} ${drag.y}`} /><g transform={`translate(${drag.x} ${drag.y}) rotate(-35)`} className="pen">
             <rect x="-6" y="-46" width="12" height="34" rx="3" /><rect x="-6" y="-56" width="12" height="11" rx="2" className="cap" /><path d="M-5 -12 L0 0 L5 -12z" className="tip" /></g></>}
         </svg>}
-        <button ref={trashEl} key={gulp} className={`lab-trash${gulp ? " gulp" : ""}${v.step === 2 ? " ready" : ""}`} onClick={restore} disabled={!v.trash.length}
+        <button ref={trashEl} key={gulp} className={`lab-trash${gulp ? " gulp" : ""}${v.step === 2 || v.trash.length ? " ready" : ""}`} onClick={restore} disabled={!v.trash.length}
           aria-label={`쓰레기통 ${v.trash.length}장${v.trash.length ? " — 눌러서 마지막 종이 되살리기" : ""}`} title={v.trash.length ? "눌러서 되살리기" : "쓰레기통"}>
+          <span className="lab-pile" aria-hidden="true">{v.trash.slice(-PILE.length).map((n, k, a) =>
+            <i key={n.id} className={k === a.length - 1 && gulp ? "drop" : ""} style={{ "--c": n.combo ? "#ffd3e6" : COLOR[n.cat] ?? "#fffdf7", left: PILE[k][0], bottom: PILE[k][1], rotate: `${(n.id * 53) % 360}deg` } as CSSProperties} />)}</span>
           <svg viewBox="0 0 64 72" aria-hidden="true"><rect x="6" y="10" width="52" height="8" rx="3" className="lid" /><rect x="24" y="4" width="16" height="7" rx="3" className="lid" />
             <path d="M11 20h42l-4 48H15z" className="can" /><path d="M24 28v32M32 28v32M40 28v32" className="rib" /></svg>
           {v.trash.length > 0 && <b>{v.trash.length}</b>}
@@ -162,7 +166,7 @@ export default function EdgeLab({ seeds }: { seeds: string[] }) {
         <div><b>이번 주에 확인해 보기</b><ol>
           <li><b>따라 하기 시험</b> — 같은 걸 파는 사람이 이 말을 그대로 쓰면 거짓말이 되나요? 그렇다면 내 것이에요.</li>
           <li><b>3명에게 묻기</b> — 살 것 같은 사람 3명에게 &ldquo;이런 곳이면 사겠어요?&rdquo;라고 물어요. 손님이 있으면 손님에게, 없으면 지인에게.</li>
-          <li><b>첫 줄에 쓰기</b> — 두 번 이상 좋다는 말이 나온 것을 소개 첫 줄에 써 봐요.</li>
+          <li><b>첫 줄에 쓰기</b> — 2번에서 물어본 3명 중 <b>2명 이상</b>이 &ldquo;사겠다&rdquo;, &ldquo;좋다&rdquo;고 한 후보를 골라 가게 소개나 SNS 프로필 첫 줄에 써 봐요. 아무도 고르지 않았다면 1단계로 돌아가 더 늘어놓아요.</li>
         </ol></div>
       </div>}
 
