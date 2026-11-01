@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type 
 import demoData from "@/lib/demo_P02.json";
 import OnePager from "./OnePager";
 import EdgeLab from "./EdgeLab";
+import ChannelMock from "./ChannelMock";
 import {
   D, N, type St, type Kind, type Brand, type Mentor, type Palette, type PromptName, type Opt,
   emptyState, flatOptions, brandType, answerText, unmatched, asList, parseSheet, parsePalettes, fallbackPalettes, chosen, sheetText, sheetQuotes, wallItems,
@@ -162,7 +163,6 @@ export default function App() {
   const [optSel, setOptSel] = useState<Record<string, string>>({});
   const [palSel, setPalSel] = useState<number | null>(null);
   const [ch, setCh] = useState("인스타그램");
-  const [copied, setCopied] = useState(-1);
   const inflight = useRef(new Set<string>()); // 같은 AI 요청이 두 번 나가지 않게 (개발 모드 이중 실행 포함)
   const garageRef = useRef<HTMLElement>(null);
   const [garagePos, setGaragePos] = useState<CSSProperties>();
@@ -553,12 +553,8 @@ export default function App() {
           {busy === "tpl" && <div className="loading">{ch}에 맞게 쓰고 있어요…</div>}
           {warn && <div className="alert error">{warn}</div>}
           {text !== undefined && <>
-            {text.split(/^###\s*/m).map((block, i) => {
-              const [title, ...rest] = block.trim().split("\n");
-              const body = rest.join("\n").trim();
-              return body ? <div key={i}><b>{title.trim()}</b>
-                <div className="codebox">{body}<button className="btn sm" onClick={() => { navigator.clipboard?.writeText(body); setCopied(i); }}>{copied === i ? "복사됨" : "복사"}</button></div></div> : null;
-            })}
+            <ChannelMock key={ch} ch={ch} name={s.name} color={(s.palettes?.[s.pal] ?? s.palettes?.[0])?.colors[0]?.hex ?? "#6b6b6b"}
+              blocks={text.split(/^###\s*/m).map(block => { const [title, ...rest] = block.trim().split("\n"); return { title: title.trim(), body: rest.join("\n").trim() }; }).filter(x => x.body)} />
             <ExagNote text={text} title="이 문구에 과장으로 보일 수 있는 표현이 있어요" />
             <p className="caption">AI가 리포트를 바탕으로 쓴 초안이에요. 사실과 다르거나 과장된 표현이 없는지 확인한 뒤 써 주세요.</p>
           </>}
