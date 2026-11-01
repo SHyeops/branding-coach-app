@@ -60,6 +60,7 @@ AI에게 한 번에 물으면 그럴듯하지만 "내 것 같지 않은" 결과�
 프롬프트 버전별 변경 이유와 결과 차이, AI 실수와 고친 방법: `20261028_프롬프트기록_v1.md`
 
 ## 7. 직접 실행하기
+준비물: Node.js 18.18 이상 (확인: `node -v`). API 키 없이 보려면 `.env.local`의 `# FAKE_AI="1"` 줄 맨 앞 `#`을 지우면 됩니다 (AI 대신 예시 답, 비용 0원).
 ```bash
 git clone https://github.com/SHyeops/branding-coach-app.git
 cd branding-coach-app/web
