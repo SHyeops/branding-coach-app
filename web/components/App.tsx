@@ -1,16 +1,17 @@
 "use client";
-// From Your Garage — 화면 전체 (Streamlit app.py에서 옮김). 메뉴: 브랜드 코칭(0 홈 → 1 기본 정보 → 2 장면 6개 → 3 첫인상 → 4 확인 → 5 결과) / 활용 템플릿 / 브랜드 스토리 / 1:1 멘토링
+// From Your Garage — 화면 전체 (Streamlit app.py에서 옮김). 메뉴: 브랜드 코칭(0 홈 → 1 기본 정보 → 2 장면 6개 → 3 첫인상 → 4 확인 → 5 결과) / 차별점 찾기 / 활용 템플릿 / 브랜드 스토리 / 1:1 멘토링
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import demoData from "@/lib/demo_P02.json";
 import OnePager from "./OnePager";
+import EdgeLab from "./EdgeLab";
 import {
   D, N, type St, type Kind, type Brand, type Mentor, type Palette, type PromptName, type Opt,
   emptyState, flatOptions, brandType, answerText, unmatched, asList, parseSheet, parsePalettes, fallbackPalettes, chosen, sheetText, sheetQuotes, wallItems,
   findExaggeration, userText,
 } from "@/lib/logic";
 
-type Page = "브랜드 코칭" | "활용 템플릿" | "브랜드 스토리" | "1:1 멘토링";
-const PAGES: Page[] = ["브랜드 코칭", "활용 템플릿", "브랜드 스토리", "1:1 멘토링"];
+type Page = "브랜드 코칭" | "차별점 찾기" | "활용 템플릿" | "브랜드 스토리" | "1:1 멘토링";
+const PAGES: Page[] = ["브랜드 코칭", "차별점 찾기", "활용 템플릿", "브랜드 스토리", "1:1 멘토링"];
 const STEPS = ["기본 정보", "생각 정리", "첫인상", "확인", "리포트"];
 const ITEMS: [string, string][] = [["type", "브랜드 유형"], ["names", "이름 후보"], ["edge", "나만의 차별점"], ["story", "내 브랜드 이야기"], ["customer", "주요 고객층"], ["pain", "고객의 고민"], ["mission", "미션"], ["message", "핵심 메시지"],
   ["slogans", "슬로건"], ["personality", "성격·말투"], ["strategy", "판매 전략"], ["color", "아이덴티티 컬러"], ["mood", "무드 키워드"],
@@ -512,7 +513,8 @@ export default function App() {
         <p className="caption">근거 확인: AI가 인용한 내 답 {quotes.length}개 중 {quotes.length - bad.length}개가 입력과 그대로 일치해요.
           {bad.length > 0 && ` 일치하지 않는 인용: ${bad.join(" / ")}.`} AI가 만든 글이니 사실과 다른 부분이 없는지 직접 확인해 주세요.</p>
         <div className="btn-row">
-          <button className="btn primary" onClick={() => setPage("활용 템플릿")}>이 시트로 채널별 문구 만들기</button>
+          <button className="btn primary" onClick={() => setPage("차별점 찾기")}>내 차별점 직접 찾아보기</button>
+          <button className="btn" onClick={() => setPage("활용 템플릿")}>이 시트로 채널별 문구 만들기</button>
           <button className="btn" onClick={() => setPage("1:1 멘토링")}>멘토와 이야기해 보기 (첫 1회 무료)</button>
         </div>
         <OnePager s={s} bt={bt} />
@@ -633,7 +635,8 @@ export default function App() {
     </>
   );
 
-  const view = { "브랜드 코칭": coaching, "활용 템플릿": templates, "브랜드 스토리": stories, "1:1 멘토링": mentors }[page];
+  const edge = () => <EdgeLab seeds={wallItems(s, s.step > 2 ? N : s.step === 2 ? s.q : 0)} />;
+  const view = { "브랜드 코칭": coaching, "차별점 찾기": edge, "활용 템플릿": templates, "브랜드 스토리": stories, "1:1 멘토링": mentors }[page];
   return (
     <main className="container">
       {/* 셔터는 등장 효과(transform)가 걸린 상자 밖에 둬야 화면 전체를 덮음 (안에 두면 가운데 상자 폭만큼만 그려져 글자가 잘림) */}
