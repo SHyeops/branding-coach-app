@@ -1,0 +1,14 @@
+{"id":"P01","name":"귤피청","type":"이야기꾼","sheetTries":1,"palettes":3,"exIn":[],"exSheet":[],"exTpl":[],"quotes":17,"matched":17,"bad":[],"sec":{"REFLECT":16,"SHEET":45,"COLORS":7,"TEMPLATE":6},"totalSec":74,"channel":"스마트스토어"}
+{"id":"P02","name":"못난이 사과","type":"이웃","sheetTries":1,"palettes":3,"exIn":[],"exSheet":[],"exTpl":[],"quotes":15,"matched":15,"bad":[],"sec":{"REFLECT":14,"SHEET":49,"COLORS":9,"TEMPLATE":6},"totalSec":78,"channel":"스마트스토어"}
+{"id":"P03","name":"토종 찰옥수수","type":"이야기꾼","sheetTries":1,"palettes":3,"exIn":[],"exSheet":[],"exTpl":[],"quotes":14,"matched":14,"bad":[],"sec":{"REFLECT":15,"SHEET":54,"COLORS":11,"TEMPLATE":5},"totalSec":85,"channel":"당근 비즈프로필"}
+{"id":"P04","name":"현수막 에코백","type":"이야기꾼","sheetTries":1,"palettes":3,"exIn":[],"exSheet":[],"exTpl":[],"quotes":13,"matched":13,"bad":[],"sec":{"REFLECT":7,"SHEET":58,"COLORS":11,"TEMPLATE":5},"totalSec":81,"channel":"인스타그램"}
+{"id":"P05","name":"감자","type":"이웃","sheetTries":1,"palettes":3,"exIn":[],"exSheet":[],"exTpl":[],"quotes":13,"matched":13,"bad":[],"sec":{"FOLLOWUP":4,"REFLECT":16,"SHEET":50,"COLORS":7,"TEMPLATE":5},"totalSec":82,"channel":"스마트스토어"}
+{"id":"P06","name":"수제 쿠키","type":"탐험가","sheetTries":1,"palettes":3,"exIn":[],"exSheet":[],"exTpl":[],"quotes":9,"matched":9,"bad":[],"sec":{"FOLLOWUP":3,"REFLECT":15,"SHEET":49,"COLORS":9,"TEMPLATE":8},"totalSec":84,"channel":"인스타그램"}
+{"id":"P07","error":"Error: SHEET: AI 연결에 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요."}
+{"id":"P08","error":"Error: REFLECT: AI 연결에 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요."}
+{"id":"P09","error":"Error: REFLECT: AI 연결에 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요."}
+{"id":"P10","error":"Error: REFLECT: AI 연결에 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요."}
+{"id":"P07","name":"콜라겐 젤리","type":"돌봄","sheetTries":1,"palettes":3,"exIn":["미백","효과 보장","주름 사라짐","최고","국내 1등","100%"],"exSheet":[],"exTpl":[],"quotes":10,"matched":10,"bad":[],"sec":{"REFLECT":10,"SHEET":48,"COLORS":9,"TEMPLATE":5},"totalSec":72,"channel":"스마트스토어"}
+{"id":"P08","name":"출근 전 30분 PT","type":"해결사","sheetTries":1,"palettes":3,"exIn":[],"exSheet":[],"exTpl":[],"quotes":10,"matched":10,"bad":[],"sec":{"REFLECT":10,"SHEET":42,"COLORS":9,"TEMPLATE":8},"totalSec":69,"channel":"당근 비즈프로필"}
+{"id":"P09","name":"원데이 도자기 클래스","type":"이야기꾼","sheetTries":1,"palettes":3,"exIn":[],"exSheet":[],"exTpl":[],"quotes":21,"matched":21,"bad":[],"sec":{"REFLECT":19,"SHEET":45,"COLORS":8,"TEMPLATE":5},"totalSec":77,"channel":"인스타그램"}
+{"id":"P10","name":"이력서 코칭","type":"돌봄","sheetTries":1,"palettes":3,"exIn":["무조건 서류 합격","합격 보장","무조건","100%"],"exSheet":[],"exTpl":[],"quotes":11,"matched":11,"bad":[],"sec":{"REFLECT":8,"SHEET":52,"COLORS":8,"TEMPLATE":7},"totalSec":75,"channel":"네이버 블로그"}

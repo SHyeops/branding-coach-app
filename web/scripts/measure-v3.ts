@@ -108,7 +108,7 @@ async function run(id: string) {
 
   writeFileSync(`${OUT}/${id}.json`, JSON.stringify({ metrics: m, state: s }, null, 1));
   writeFileSync(`${OUT}/${id}.md`, [
-    `# ${id} ${s.name} — v3 측정 (2026-10-30, 모델: .env의 OPENAI_MODEL, 프롬프트 v3.4)`,
+    `# ${id} ${s.name} — v3 측정 (${process.env.LABEL ?? "2026-10-30, 프롬프트 v3.4"}, 모델: .env의 OPENAI_MODEL)`,
     `- 브랜드 유형(앱 계산): ${type}형 / 시트 시도 ${tries}번 / 컬러 ${s.palettes.length}안 / 걸린 시간 ${m.totalSec}초 ${JSON.stringify(sec)}`,
     `- 과장 표현: 입력 ${exIn.length}개 [${m.exIn.join(", ")}] → 시트 ${exSheet.length}개 [${m.exSheet.join(", ")}] / 템플릿 ${exTpl.length}개 [${m.exTpl.join(", ")}]`,
     `- 근거 인용: ${quotes.length}개 중 ${m.matched}개 일치${bad.length ? ` / 불일치: ${bad.join(" / ")}` : ""}`,

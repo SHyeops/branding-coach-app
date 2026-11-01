@@ -26,7 +26,8 @@ def summarize(rows):
     return dict(n=len(rows), pick_n=len(pick), app=pick.count("앱"), v1=pick.count("v1"),
                 pre=pre[0], post=post[0], time=avg(rows, "작성 시간(분)")[0],
                 start=avg(rows, "시작해도 되겠다(1~5)")[0], rec=avg(rows, "추천 의향(1~5)")[0],
-                errs=len(errs), rows=rows)
+                errs=len(errs), rows=rows, edge=avg(rows, "차별점이 실제로 다름(1~5)")[0],
+                new=sum((r["새로 알게 된 것(있음/없음)"] or "").strip() == "있음" for r in rows))
 
 
 def blanks():
@@ -58,9 +59,11 @@ if __name__ == "__main__":
         f"| 작성 시간 | 앱 평균 {fmt(s['time'], '분')} (직접 작성 24.5분) |",
         f"| '이제 시작해도 되겠다' (1~5) | {fmt(s['start'])} |",
         f"| 추천 의향 (1~5) | {fmt(s['rec'])} |",
+        f"| 새로 알게 된 것이 있었다 | {s['new']} / {s['n']}명 |",
+        f"| 차별점이 경쟁자와 실제로 다르다 (1~5) | {fmt(s['edge'])} |",
         f"| 오류 제보 | {s['errs']}건 |", "",
         "## 고른 이유 · 피드백", "",
-        *[f"- **{r['ID']}** ({r['분야'] or '-'}) 고른 쪽 {r['고른쪽(앱/v1)'] or '-'}: {r['고른 이유'] or '-'} / 좋았던 점: {r['좋았던 점'] or '-'} / 답답했던 점: {r['답답했던 점'] or '-'} / 오류: {r['오류·이상한 화면'] or '-'} / 안 맞는 결과: {r['안 맞는 결과'] or '-'} / 하나만 바꾼다면: {r['하나만 바꾼다면'] or '-'}" for r in s["rows"]],
+        *[f"- **{r['ID']}** ({r['분야'] or '-'}) 고른 쪽 {r['고른쪽(앱/v1)'] or '-'}: {r['고른 이유'] or '-'} / 좋았던 점: {r['좋았던 점'] or '-'} / 답답했던 점: {r['답답했던 점'] or '-'} / 오류: {r['오류·이상한 화면'] or '-'} / 안 맞는 결과: {r['안 맞는 결과'] or '-'} / 하나만 바꾼다면: {r['하나만 바꾼다면'] or '-'} / 새로 알게 된 것: {r['새로 알게 된 내용'] or '-'}" for r in s["rows"]],
         "", "## 문서에 남은 빈칸 (0개가 되면 반영 끝)", "",
         *[f"- {h}" for h in blanks()],
     ]
