@@ -2,6 +2,7 @@
 // From Your Garage — 화면 전체 (Streamlit app.py에서 옮김). 메뉴: 브랜드 코칭(0 홈 → 1 기본 정보 → 2 장면 6개 → 3 첫인상 → 4 확인 → 5 결과) / 활용 템플릿 / 브랜드 스토리 / 1:1 멘토링
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import demoData from "@/lib/demo_P02.json";
+import OnePager from "./OnePager";
 import {
   D, N, type St, type Kind, type Brand, type Mentor, type Palette, type PromptName, type Opt,
   emptyState, flatOptions, brandType, answerText, unmatched, asList, parseSheet, parsePalettes, fallbackPalettes, chosen, sheetText, sheetQuotes, wallItems,
@@ -514,6 +515,7 @@ export default function App() {
           <button className="btn primary" onClick={() => setPage("활용 템플릿")}>이 시트로 채널별 문구 만들기</button>
           <button className="btn" onClick={() => setPage("1:1 멘토링")}>멘토와 이야기해 보기 (첫 1회 무료)</button>
         </div>
+        <OnePager s={s} bt={bt} />
       </>
     );
   };

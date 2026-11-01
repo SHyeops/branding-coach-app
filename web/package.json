@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "html-to-image": "^1.11.11",
     "next": "^15.5.28",
     "openai": "^4.104.0",
     "react": "19.1.0",
