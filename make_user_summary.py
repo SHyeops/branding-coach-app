@@ -39,7 +39,8 @@ def blanks():
     hits = []
     for _, f in sorted(latest.values(), key=lambda x: x[1]):
         for i, line in enumerate(Path(f).read_text().splitlines(), 1):
-            if BLANK.search(line) and not line.startswith(">"): hits.append  # '>' 줄은 빈칸 설명(범례)(f"`{f}:{i}`")
+            if BLANK.search(line) and not line.startswith(">"):  # '>' 줄은 빈칸 설명(범례)
+                hits.append(f"`{f}:{i}`")
     return hits
 
 
