@@ -222,7 +222,7 @@ export default function App() {
       });
   }, [s.step, s.reflect, s.sheet, s.palettes, s.err]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const reset = () => { setS(emptyState()); setPage("브랜드 코칭"); window.history.replaceState(null, "", "/"); };
+  const reset = () => { setS({ ...emptyState(), step: 1 }); setPage("브랜드 코칭"); window.history.replaceState(null, "", "/"); };
   const [bt, reasons] = brandType(s.kind, s.picks);
   const byLogo = Object.fromEntries(D.BRANDS.map(b => [b.logo, b])) as Record<string, Brand>;
 
@@ -319,7 +319,7 @@ export default function App() {
         {warn && <div className="alert warning">{warn}</div>}
         {busy === "followup" && <div className="loading">조금 더 여쭤볼게요…</div>}
         <div className="btn-row">
-          <button className="btn" onClick={() => i > 0 && up({ q: i - 1 })}>이전</button>
+          <button className="btn" onClick={() => up(i > 0 ? { q: i - 1 } : { step: 1 })}>이전</button>
           <button className="btn primary" disabled={!!busy} onClick={next}>다음</button>
         </div>
       </>
@@ -346,7 +346,7 @@ export default function App() {
                 <Radios two options={[a[0], b[0]]} value={traitPicks[k]} onChange={v => setTraitPicks(t => t.map((x, j) => (j === k ? v : x)))} fmt={o => `${o} — “${ex[o]}”`} />
               </div>
             ))}
-            <div className="btn-gap"><button className="btn primary" onClick={() => up({ traits: traitPicks })}>다음</button></div>
+            <div className="btn-row"><button className="btn" onClick={() => up({ step: 2, q: N - 1 })}>이전</button><button className="btn primary" onClick={() => up({ traits: traitPicks })}>다음</button></div>
           </>
         ) : (
           <>
@@ -565,14 +565,16 @@ export default function App() {
   const stories = () => (
     <>
       <div className="hero story-hero"><span className="eyebrow">BRAND STORIES</span><div className="page-title">작은 곳에서 시작한 브랜드들</div>
-        <p className="hero-sub">로고를 누르면 브랜드 브리프와 시작 이야기를 볼 수 있어요.</p></div>
-      <div className="brand-grid">
-        {D.BRANDS.map(b => (
-          <button key={b.logo} className="brand-card" onClick={() => setModal({ b })}>
-            <img className={WIDE_LOGO.has(b.logo) ? "wide" : ""} src={`/assets/brands/${b.logo}.svg`} alt="" />{b.name}<br />{b.en}
-          </button>
-        ))}
-      </div>
+        <p className="hero-sub">카드를 누르면 브랜드 브리프와 시작 이야기를 볼 수 있어요.</p></div>
+      {[["요즘 뜨는 작은 브랜드", true], ["작은 곳에서 시작한 큰 브랜드", false]].map(([title, small]) => <div key={String(small)}>
+        <h3 className="brand-sec">{title}</h3>
+        <div className="brand-grid">
+          {D.BRANDS.filter(b => !!b.small === small).map(b => (
+            <button key={b.logo} className="brand-card" onClick={() => setModal({ b })}>
+              {b.mark ? <span className="brand-mark">{b.mark}</span> : <img className={WIDE_LOGO.has(b.logo) ? "wide" : ""} src={`/assets/brands/${b.logo}.svg`} alt="" />}{b.name}<br />{b.en}
+            </button>
+          ))}
+        </div></div>)}
     </>
   );
 
@@ -601,7 +603,7 @@ export default function App() {
 
   const brandModal = (b: Brand, similar?: string) => (
     <>
-      <div className="bm-head"><span className="bm-logo"><img className={b.logo === "samsung" ? "wide" : ""} src={`/assets/brands/${b.logo}.svg`} alt={b.en} /></span>
+      <div className="bm-head"><span className="bm-logo">{b.mark ? <span className="brand-mark sm">{b.mark}</span> : <img className={b.logo === "samsung" ? "wide" : ""} src={`/assets/brands/${b.logo}.svg`} alt={b.en} />}</span>
         <div><div className="bm-name">{b.name} <small>{b.en}</small></div><div className="bm-meta">{b.since} · {b.founder}</div></div></div>
       <div className="bm-msg">“{b.message}”<small>{b.official ? "대표 문구" : "핵심 생각 (공식 문구 아님, 요약)"}</small></div>
       <div className="bm-tags">{b.keywords.map(k => <span key={k}>#{k}</span>)}</div>
@@ -613,7 +615,7 @@ export default function App() {
           <img src={`https://commons.wikimedia.org/wiki/Special:FilePath/${encodeURIComponent(file)}?width=900`} alt={cap} />
           <figcaption>{cap} · 위키미디어 공용({lic})</figcaption></figure>)}
       </div>}
-      <p><a href={b.wiki} target="_blank" rel="noreferrer">위키백과에서 더 보기</a></p>
+      <p><a href={b.wiki} target="_blank" rel="noreferrer">{b.small ? "관련 기사에서 더 보기" : "위키백과에서 더 보기"}</a></p>
     </>
   );
   const mentorModal = (m: Mentor) => (
@@ -629,7 +631,7 @@ export default function App() {
     </>
   );
 
-  const edge = () => <EdgeLab seeds={wallItems(s, s.step > 2 ? N : s.step === 2 ? s.q : 0)} />;
+  const edge = () => <EdgeLab seeds={[s.desc, ...s.notes].map(x => x.trim()).filter(Boolean)} />; // 고른 보기 문장은 엮기 어렵다는 피드백(11/2) → 내가 직접 쓴 말만, 눌러서 줄여 붙이게
   const view = { "브랜드 코칭": coaching, "차별점 찾기": edge, "활용 템플릿": templates, "브랜드 스토리": stories, "1:1 멘토링": mentors }[page];
   return (
     <main className="container">

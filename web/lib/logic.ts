@@ -8,6 +8,7 @@ export type TypeInfo = { desc: string; good: string; care: string; like: [string
 export type Brand = {
   logo: string; name: string; en: string; since: string; founder: string; message: string; official: boolean;
   keywords: string[]; story: string; lesson: string; photos: [string, string, string][]; wiki: string;
+  mark?: string; small?: boolean; // 작은 브랜드: 로고 파일 대신 글자 마크, wiki 자리에 기사 주소
 };
 export type Mentor = {
   avatar: string; name: string; role: string; years: number; badge?: string; tags: string[];

@@ -72,7 +72,6 @@ export default function EdgeLab({ seeds }: { seeds: string[] }) {
   const stick = () => { const t = text.trim(); if (t) { add(t, cat); setText(""); } };
   const enter = (f: () => void) => (e: KeyboardEvent) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); f(); } };
   const fresh = seeds.filter(x => !v.notes.some(n => n.text === x) && !v.trash.some(n => n.text === x));
-  const pulled = () => setV(o => ({ ...o, next: o.next + fresh.length, notes: [...o.notes, ...fresh.map((t, k) => ({ id: o.next + k, text: t, cat: "코칭에서" }))] }));
   const go = (n: number) => { setSel([]); setCombo(""); up({ step: n }); };
 
   const tap = (n: Note, keyboard = false) => {
@@ -118,7 +117,8 @@ export default function EdgeLab({ seeds }: { seeds: string[] }) {
             onChange={e => setText(e.target.value)} onKeyDown={enter(stick)} aria-label={`${cat} 적기`} />
           <button className="btn primary" disabled={!text.trim()} onClick={stick}>벽에 붙이기</button>
         </div>
-        {fresh.length > 0 && <button className="btn sm" onClick={pulled}>코칭에서 고른 것 {fresh.length}장 붙이기</button>}
+        {fresh.length > 0 && <div className="lab-seeds"><span>코칭에서 내가 쓴 말 — 누르면 위 칸에 들어가요. <b>짧은 낱말로 줄여서</b> 붙여 보세요</span>
+          {fresh.map(t => <button key={t} className="btn sm" onClick={() => setText(t.slice(0, 40))}>{t.length > 28 ? t.slice(0, 28) + "…" : t}</button>)}</div>}
       </div>}
 
       <div className={`wall lab-wall step${v.step}`} ref={wall}>
