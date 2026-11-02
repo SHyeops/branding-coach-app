@@ -272,7 +272,7 @@ export default function App() {
         <ExagNote text={`${s.name}\n${s.desc}`} />
         {warn && <div className="alert warning">{warn}</div>}
         <div className="btn-gap">
-          <button className="btn primary" onClick={() => ((!s.name.trim() && !s.nameTbd) || !s.desc.trim() ? setWarn(s.desc.trim() ? "이름을 적거나 '아직 이름이 정해지지 않았어요'를 체크해 주세요." : "한 줄 설명을 적어 주세요. (무엇을, 누구에게 정도면 충분해요)") : up({ step: 2, ...(s.name.trim() ? {} : { name: "이름 미정" }) }))}>시작하기</button>
+          <button className="btn primary" onClick={() => ((!s.name.trim() && !s.nameTbd) || !s.desc.trim() ? setWarn(s.desc.trim() ? "이름을 적거나 '아직 이름이 없다면' 칸을 체크해 주세요." : "한 줄 설명을 적어 주세요. (무엇을, 누구에게 정도면 충분해요)") : up({ step: 2, ...(s.name.trim() ? {} : { name: "이름 미정" }) }))}>시작하기</button>
         </div>
       </>
     );
