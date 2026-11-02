@@ -28,12 +28,12 @@ def summarize(rows):
                 start=avg(rows, "시작해도 되겠다(1~5)")[0], rec=avg(rows, "추천 의향(1~5)")[0],
                 errs=len(errs), rows=rows, edge=avg(rows, "차별점이 실제로 다름(1~5)")[0],
                 new=sum((r["새로 알게 된 것(있음/없음)"] or "").strip() == "있음" for r in rows),
-                found=sum((r.get("직접 찾은 후보(있음/없음)") or "").strip() == "있음" for r in rows),
+                found=sum((r.get("직접 찾은 후보(있음/없음)") or "").strip() == "있음" for r in rows), tried=sum(bool((r.get("직접 찾은 후보(있음/없음)") or "").strip()) for r in rows),
                 mine={k: sum((r.get("더 내 것 같은 차별점(앱/직접/비슷)") or "").strip() == k for r in rows) for k in ("앱", "직접", "비슷")})
 
 
 def blanks():
-    files = sorted(set(glob.glob("*발표자료*") + glob.glob("*기획_v*.md") + ["README.md"]))
+    files = sorted(set(glob.glob("*발표자료*.html") + glob.glob("*발표자료*.md") + glob.glob("*기획_v*.md") + ["README.md"]))
     latest = {}
     for f in files:  # 같은 이름은 최신 버전만
         key = re.sub(r"^\d+_|_v\d+.*$", "", f) + Path(f).suffix
@@ -63,7 +63,7 @@ if __name__ == "__main__":
         f"| 추천 의향 (1~5) | {fmt(s['rec'])} |",
         f"| 새로 알게 된 것이 있었다 | {s['new']} / {s['n']}명 |",
         f"| 차별점이 경쟁자와 실제로 다르다 (1~5) | {fmt(s['edge'])} |",
-        f"| '차별점 찾기'에서 새 후보를 찾았다 | {s['found']} / {s['n']}명 |",
+        f"| '차별점 찾기'에서 새 후보를 찾았다 | {s['found']} / {s['tried']}명 (해 본 사람) |",
         f"| 더 내 것 같은 차별점 | 앱 {s['mine']['앱']} · 직접 {s['mine']['직접']} · 비슷 {s['mine']['비슷']} (명) |",
         f"| 오류 제보 | {s['errs']}건 |", "",
         "## 고른 이유 · 피드백", "",
