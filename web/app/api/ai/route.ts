@@ -30,7 +30,7 @@ function fakeAnswer(name: PromptName, s: St) {
     return JSON.stringify(d);
   }
   if (name === "TEMPLATE") return `### 예시 항목 1\n(테스트 모드 예시) ${s.name} 문구예요.\n두 번째 줄이에요.\n\n### 예시 항목 2\n(테스트 모드 예시) ${a}`;
-  if (name === "REFLECT") return `### 이 브랜드만 가진 것\n(테스트 모드 예시) ${a}\n\n### 첫인상\n${(s.traits ?? []).join(", ")}\n\n> 생각해 볼 질문: (테스트 모드 예시)`;
+  if (name === "REFLECT") return `### 나만의 강점\n(테스트 모드 예시) **핵심 구절** ${a}\n\n### 첫인상\n${(s.traits ?? []).join(", ")}\n\n> 생각해 볼 질문: (테스트 모드 예시)`;
   return "(테스트 모드 예시) 조금 더 들려주세요. 예를 들면 그때 어떤 상황이었는지, 누가 떠올랐는지요.";
 }
 

@@ -450,3 +450,31 @@ h2.page-h { font-size: clamp(30px, 4vw, 48px); line-height: 1.15; font-weight: 8
 .mk-item b { color: var(--amber); font-size: .9rem; } .mk-item p { margin: 4px 0 0; white-space: pre-wrap; line-height: 1.65; }
 .mk-item .btn { position: absolute; top: 12px; right: 12px; }
 @media (max-width: 760px) { .mk-wrap { grid-template-columns: 1fr; } .mk-phone { max-width: 380px; width: 100%; margin: 0 auto; } }
+
+/* 11/2 연습 피드백 2차 */
+.basics .radio-grid.two { grid-template-columns: repeat(2, minmax(0, 220px)); }
+.basics .radio-opt { padding: 10px 14px; font-size: .95rem; }
+.basics .field input { max-width: 560px; padding: 10px 12px; font-size: 1rem; }
+.basics .field:first-of-type input { max-width: 320px; }
+.check input { appearance: none; -webkit-appearance: none; flex: none; width: 24px; height: 24px; margin: 0; border: 2px solid var(--ink-2); border-radius: 6px; background: var(--surface); display: grid; place-items: center; cursor: pointer; }
+.check input:checked { background: var(--pink); border-color: var(--pink); }
+.check input:checked::after { content: "✓"; color: #fff; font-weight: 900; font-size: 16px; line-height: 1; }
+.check input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.check > span { color: var(--ink); font-weight: 600; }
+.check small { display: block; font-weight: 400; color: var(--ink-2); font-size: .85rem; }
+.one-col .radio-grid, .one-col .radio-grid.two { grid-template-columns: 1fr; }
+.pills.list { flex-direction: column; align-items: stretch; }
+.pills.list .pill { border-radius: 12px; text-align: left; padding: .75rem 1rem; }
+.trait-pair .radio-label { text-align: center; }
+.trait-pair .radio-label i { font-style: normal; color: var(--ink-2); font-weight: 500; margin: 0 .3em; }
+.trait-pair .radio-grid.two { grid-template-columns: 1fr 1fr; }
+.md b, mark { color: #1d1d1f; background: linear-gradient(transparent 8%, #ffe45c 8%, #ffe45c 92%, transparent 92%); padding: 0 .15em; border-radius: 2px; }
+.choose-tag { display: inline-block; margin-top: 8px; padding: .25rem .65rem; border-radius: 6px; font-size: .9rem; font-weight: 700; color: #2a2414; background: var(--amber); }
+.choose-tag.inline { margin: 0; font-size: .85rem; padding: .05rem .45rem; }
+.res-item .sl { font-size: .95rem; }
+.res-item .sv-main { font-size: 1.32rem; }
+.res-item .sv-sub, .res-item .sv-list, .res-item .sv-chips span { font-size: 1.08rem; }
+.res-item .sv-story { font-size: 1.12rem; }
+.lab-trash-row { display: flex; justify-content: flex-end; margin: -.6rem 0 1rem; }
+.sheet-hint .choose-tag, .res-item .choose-tag { color: #2a2414; }
+.pills.list, .one-col .radio-grid { max-width: 680px; }

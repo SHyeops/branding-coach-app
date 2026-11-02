@@ -111,14 +111,14 @@ export default function EdgeLab({ seeds }: { seeds: string[] }) {
       <p className="lab-hint">{STEPS[v.step].h}</p>
 
       {v.step === 0 && <div className="lab-input">
-        <div className="lab-cats">{CATS.slice(0, 4).map(([c, col]) => <button key={c} className={c === cat ? "on" : ""} style={{ "--c": col } as CSSProperties} onClick={() => setCat(c)}>{c}</button>)}</div>
+        <div className="lab-cats">{CATS.slice(0, seeds.length ? 5 : 4).map(([c, col]) => <button key={c} className={c === cat ? "on" : ""} style={{ "--c": col } as CSSProperties} onClick={() => setCat(c)}>{c}</button>)}</div>
         <div className="lab-row">
-          <input value={text} maxLength={40} placeholder={{ "할 줄 아는 것": "예: 엑셀로 원가 계산", "좋아하는 것": "예: 새벽 시장 구경", "겪은 일·경력": "예: 회계 사무소 5년", "칭찬받은 것": "예: 설명을 쉽게 한다" }[cat]}
+          <input value={text} maxLength={40} placeholder={{ "할 줄 아는 것": "예: 엑셀로 원가 계산", "좋아하는 것": "예: 새벽 시장 구경", "겪은 일·경력": "예: 회계 사무소 5년", "칭찬받은 것": "예: 설명을 쉽게 한다", "코칭에서": "아래 버튼을 누르고 짧게 줄여 보세요" }[cat]}
             onChange={e => setText(e.target.value)} onKeyDown={enter(stick)} aria-label={`${cat} 적기`} />
           <button className="btn primary" disabled={!text.trim()} onClick={stick}>벽에 붙이기</button>
         </div>
-        {fresh.length > 0 && <div className="lab-seeds"><span>코칭에서 내가 쓴 말 — 누르면 위 칸에 들어가요. <b>짧은 낱말로 줄여서</b> 붙여 보세요</span>
-          {fresh.map(t => <button key={t} className="btn sm" onClick={() => setText(t.slice(0, 40))}>{t.length > 28 ? t.slice(0, 28) + "…" : t}</button>)}</div>}
+        {fresh.length > 0 && <div className="lab-seeds"><span>코칭에서 내가 쓴 말 — 누르면 위 칸에 들어가고 흰 종이(코칭에서)로 붙어요. <b>짧은 낱말로 줄여서</b> 붙여 보세요</span>
+          {fresh.map(t => <button key={t} className="btn sm" onClick={() => { setText(t.slice(0, 40)); setCat("코칭에서"); }}>{t.length > 28 ? t.slice(0, 28) + "…" : t}</button>)}</div>}
       </div>}
 
       <div className={`wall lab-wall step${v.step}`} ref={wall}>
@@ -149,6 +149,7 @@ export default function EdgeLab({ seeds }: { seeds: string[] }) {
           {v.trash.length > 0 && <b>{v.trash.length}</b>}
         </button>
       </div>
+      {v.trash.length > 0 && <div className="lab-trash-row"><button className="btn sm" onClick={() => { if (confirm(`쓰레기통의 종이 ${v.trash.length}장을 완전히 버릴까요? 되살릴 수 없어요.`)) up({ trash: [] }); }}>🗑 휴지통 비우기 ({v.trash.length}장)</button></div>}
 
       {v.step === 1 && sel.length === 2 && <div className="lab-input tie">
         <p><b>「{picked[0]}」</b> + <b>「{picked[1]}」</b> = ?</p>

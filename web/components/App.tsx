@@ -88,11 +88,11 @@ function Radios({ options, value, onChange, fmt, two }: { options: string[]; val
   );
 }
 
-function Pills({ label, options, value, onToggle }: { label: string; options: string[]; value: string[]; onToggle: (v: string) => void }) {
+function Pills({ label, options, value, onToggle, list }: { label: string; options: string[]; value: string[]; onToggle: (v: string) => void; list?: boolean }) {
   return (
     <>
       <span className="pill-label">{label}</span>
-      <div className="pills" role="group" aria-label={label}>
+      <div className={`pills${list ? " list" : ""}`} role="group" aria-label={label}>
         {options.map(o => <button type="button" key={o} aria-pressed={value.includes(o)} className={`pill${value.includes(o) ? " on" : ""}`} onClick={() => onToggle(o)}>{o}</button>)}
       </div>
     </>
@@ -261,13 +261,15 @@ export default function App() {
     return (
       <>
         <h2 className="page-h">먼저 어떤 걸 브랜딩할지 알려 주세요</h2>
+        <div className="basics">
         <span className="radio-label">형태</span>
         <Radios two options={["상품", "서비스"]} value={s.kind} onChange={k => up({ kind: k as Kind })} fmt={k => (k === "서비스" ? "서비스 (레슨·클래스·코칭 포함)" : k)} />
         <label className="field"><span>이름{s.nameTbd ? " (비워도 돼요)" : ""}</span><input value={s.name} placeholder={ex.name} onChange={e => up({ name: e.target.value })} /></label>
-        <label className="check"><input type="checkbox" checked={!!s.nameTbd} onChange={e => up({ nameTbd: e.target.checked })} /> 아직 이름이 정해지지 않았어요 (가칭) — 리포트에서 이름 후보를 받아요</label>
-        <label className="field"><span>한 줄 설명 (필수)</span><textarea value={s.desc} placeholder={ex.desc} onChange={e => up({ desc: e.target.value })} /></label>
-        <label className="field"><span>(선택) 이미 구상 중인 내용이 있다면 자유롭게 적어 주세요</span><textarea value={s.memo} placeholder={ex.memo} onChange={e => up({ memo: e.target.value })} /></label>
-        <ExagNote text={`${s.name}\n${s.desc}\n${s.memo}`} />
+        <label className="check"><input type="checkbox" checked={!!s.nameTbd} onChange={e => up({ nameTbd: e.target.checked })} /><span>아직 이름이 없다면 체크해 주세요<small>리포트에서 이름 후보를 추천해 드려요</small></span></label>
+        <label className="field"><span>한 줄 설명 (필수)</span><input value={s.desc} placeholder={ex.desc} onChange={e => up({ desc: e.target.value })} /></label>
+        </div>
+        {/* 구상 메모 칸은 뺌(11/2): 같은 내용을 장면마다 '보기가 아쉽다면?' 칸과 확인 단계에서 더 구체적으로 받음 */}
+        <ExagNote text={`${s.name}\n${s.desc}`} />
         {warn && <div className="alert warning">{warn}</div>}
         <div className="btn-gap">
           <button className="btn primary" onClick={() => ((!s.name.trim() && !s.nameTbd) || !s.desc.trim() ? setWarn(s.desc.trim() ? "이름을 적거나 '아직 이름이 정해지지 않았어요'를 체크해 주세요." : "한 줄 설명을 적어 주세요. (무엇을, 누구에게 정도면 충분해요)") : up({ step: 2, ...(s.name.trim() ? {} : { name: "이름 미정" }) }))}>시작하기</button>
@@ -289,7 +291,7 @@ export default function App() {
     const toggle = (o: string) => setPick(cur.includes(o) ? cur.filter(x => x !== o) : [...cur, o]);
     const groups: [string, Opt[]][] = sc.pick > 1
       ? (Array.isArray((sc.options![0] as unknown[])[1]) && Array.isArray(((sc.options![0] as unknown[])[1] as unknown[])[0])
-        ? (sc.options as [string, Opt[]][]) : [[`최대 ${sc.pick}개까지 골라요`, sc.options as Opt[]]]) : [];
+        ? (sc.options as [string, Opt[]][]) : [[sc.pick < 9 ? `최대 ${sc.pick}개까지 골라요` : "여러 개 골라도 돼요", sc.options as Opt[]]]) : [];
     const next = async () => {
       if (sc.pick && !cur.length && !note.trim()) return setWarn("마음에 가장 가까운 걸 고르거나, 맞는 게 없으면 아래에 직접 적어 주세요.");
       if (sc.pick > 1 && sc.pick < 9 && cur.length > sc.pick) return setWarn(`최대 ${sc.pick}개까지 골라 주세요. 가장 가까운 것만 남겨 볼까요?`);
@@ -310,11 +312,11 @@ export default function App() {
         <p className="scene">{sc.scene}</p>
         <div className="ask">“{sc.ask}”</div>
         {s.more[i] && <div className="alert info">{s.more[i]}</div>}
-        {sc.pick === 1 && <Radios options={flatOptions(sc).map(([o]) => o)} value={cur[0]} onChange={o => setPick([o])} />}
-        {groups.map(([label, opts]) => <Pills key={label} label={label} options={opts.map(([o]) => o)} value={cur} onToggle={toggle} />)}
+        {sc.pick === 1 && <div className="one-col"><Radios options={flatOptions(sc).map(([o]) => o)} value={cur[0]} onChange={o => setPick([o])} /></div>}
+        {groups.map(([label, opts]) => <Pills list key={label} label={label} options={opts.map(([o]) => o)} value={cur} onToggle={toggle} />)}
         {sc.pick === 0 && <label className="field"><span>노트에 적어 보세요 (&quot;모르겠어요&quot;도 괜찮아요)</span><textarea value={s.notes[i]} onChange={e => setNote(e.target.value)} /></label>}
-        {sc.pick !== 0 && sc.note && <label className="field"><span>✏️ 노트에 한 줄 더 적기 (선택)</span><input value={s.notes[i]} placeholder="예: 그때 있었던 일, 떠오른 사람" onChange={e => setNote(e.target.value)} /></label>}
-        {sc.pick !== 0 && !sc.note && <label className="field"><span>{detail ? `✏️ 조금만 더: ${detail} (선택, 한 줄)` : "✏️ 맞는 보기가 없으면 직접 적기 (선택, 한 줄)"}</span><input value={s.notes[i]} onChange={e => setNote(e.target.value)} /></label>}
+        {sc.pick !== 0 && sc.note && <label className="field"><span>✏️ 위 보기가 조금 아쉽다면? 내 말로 적어 주세요 (선택)</span><input value={s.notes[i]} placeholder="예: 그때 있었던 일, 떠오른 사람" onChange={e => setNote(e.target.value)} /></label>}
+        {sc.pick !== 0 && !sc.note && <label className="field"><span>{detail ? `✏️ 조금만 더: ${detail} (선택, 한 줄)` : "✏️ 위 보기가 조금 아쉽다면? 내 말로 적어 주세요 (선택)"}</span><input value={s.notes[i]} onChange={e => setNote(e.target.value)} /></label>}
         <ExagNote text={note} />
         {warn && <div className="alert warning">{warn}</div>}
         {busy === "followup" && <div className="loading">조금 더 여쭤볼게요…</div>}
@@ -341,8 +343,8 @@ export default function App() {
           <>
             <p className="caption">1단계 · 둘 중 내 브랜드에 더 가까운 쪽을 골라 주세요. 정답은 없어요.</p>
             {D.TRAITS.map(([a, b], k) => (
-              <div key={k}>
-                <span className="radio-label">{a[0]} vs {b[0]}</span>
+              <div key={k} className="trait-pair">
+                <span className="radio-label">{a[0]} <i>vs</i> {b[0]}</span>
                 <Radios two options={[a[0], b[0]]} value={traitPicks[k]} onChange={v => setTraitPicks(t => t.map((x, j) => (j === k ? v : x)))} fmt={o => `${o} — “${ex[o]}”`} />
               </div>
             ))}
@@ -354,7 +356,7 @@ export default function App() {
             <p className="caption">2단계 · 처음 인사할 때 건넬 한마디라면? 내 브랜드가 할 법한 말투를 하나 골라 주세요. (말투 예시일 뿐, 내용은 내 답변으로 채워져요)</p>
             <Radios options={tones} value={tone} onChange={setTonePick} />
             <div className="btn-row">
-              <button className="btn" onClick={() => up({ traits: undefined })}>성향 다시 고르기</button>
+              <button className="btn" onClick={() => up({ traits: undefined })}>이전</button>
               <button className="btn primary" onClick={() => up({ tone, step: 4 })}>아이디어 ON!</button>
             </div>
           </>
@@ -367,7 +369,7 @@ export default function App() {
   const confirm = () => (
     <>
       <h2 className="page-h">코치가 읽은 내 브랜드</h2>
-      <p className="caption">고른 것과 쓴 말을 엮어 읽어 봤어요. 내 생각과 다르면 아래에 적어 주세요. 다시 읽어 볼게요.</p>
+      <p className="caption">고른 것과 쓴 말을 엮어 읽어 봤어요. <mark>형광펜</mark>이 핵심이에요. 내 생각과 다르면 아래에 적어 주세요. 다시 읽어 볼게요.</p>
       {busy === "reflect" && <div className="loading">정리하고 있어요…</div>}
       {s.err ? (
         <><div className="alert error">{s.err}</div><button className="btn" onClick={() => up({ err: null, reflect: undefined })}>다시 시도</button></>
@@ -396,7 +398,7 @@ export default function App() {
     const it = s.sheet?.[k] ?? {};
     if ("options" in it) {
       const n = asList(it.options).length;
-      return <><div className="sv-main"><Soft t={chosen(s, k)} /></div>{n > 1 && <div className="sv-sub">다른 안 {n - 1}개 · 상세에서 바꿀 수 있어요</div>}</>;
+      return <><div className="sv-main"><Soft t={chosen(s, k)} /></div>{n > 1 && (s.choice?.[k] ? <div className="sv-sub">✓ 내가 고른 안 · 상세에서 바꿀 수 있어요</div> : <div className="choose-tag">👉 안 {n}개 중 하나를 골라 주세요 — 상세</div>)}</>;
     }
     const v = it.value;
     if (k === "values" || k === "mood") return <div className="sv-chips">{asList(v).map((x, i) => <span key={i}>{String(x)}</span>)}</div>;
@@ -441,7 +443,7 @@ export default function App() {
           onChange={v => setPalSel(s.palettes!.findIndex((p, n) => (p.name || `${n + 1}안`) === v))} />
         <PaletteView p={s.palettes[j] ?? s.palettes[0]} s={s} />
         {s.palettes[0].fallback && <div className="btn-gap"><button className="btn" disabled={!!busy} onClick={() => up({ palettes: undefined })}>컬러 다시 추천받기</button></div>}
-        <div className="btn-gap"><button className="btn primary" onClick={() => up({ pal: j })}>이 컬러로 정하기</button></div>
+        <div className="btn-gap"><button className="btn primary" onClick={() => up({ pal: j })}>{s.pal === j ? "✓ 이 컬러로 정했어요 — 결과에 반영됨" : "이 컬러로 정하기"}</button></div>
       </>;
     }
     const it = s.sheet?.[k] ?? {};
@@ -477,7 +479,7 @@ export default function App() {
           <div className="sheet-name" role="heading" aria-level={1}>{s.name}<span className="mt-badge">{bt}형</span></div>
           <p className="sheet-one">{String(s.sheet.one_liner?.value ?? "")}</p>
           <div className="bm-tags">{asList(s.sheet.values?.value).map((v, i) => <span key={i}>#{String(v)}</span>)}</div>
-          <p className="sheet-hint">내 선택과 내 말을 엮어서 낸 결론이에요. 항목의 <b>상세</b>를 누르면 이렇게 나온 이유와 근거를 볼 수 있어요.</p>
+          <p className="sheet-hint">내 선택과 내 말을 엮어서 낸 결론이에요. 항목의 <b>상세</b>를 누르면 이렇게 나온 이유와 근거를 볼 수 있어요. <b className="choose-tag inline">👉 표시</b>가 있는 항목은 안이 여러 개라, 상세에서 하나를 골라 주세요.</p>
         </div>
         <div className="res-grid">
           <div className="res-list">
@@ -515,7 +517,7 @@ export default function App() {
           <button className="btn" onClick={() => setPage("활용 템플릿")}>이 시트로 채널별 문구 만들기</button>
           <button className="btn" onClick={() => setPage("1:1 멘토링")}>멘토와 이야기해 보기 (첫 1회 무료)</button>
         </div>
-        <OnePager s={s} bt={bt} />
+        <OnePager s={s} bt={bt} items={ITEMS} />
       </>
     );
   };
