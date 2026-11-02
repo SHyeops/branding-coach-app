@@ -312,8 +312,8 @@ export default function App() {
         <p className="scene">{sc.scene}</p>
         <div className="ask">“{sc.ask}”</div>
         {s.more[i] && <div className="alert info">{s.more[i]}</div>}
-        {sc.pick === 1 && <div className="one-col"><Radios options={flatOptions(sc).map(([o]) => o)} value={cur[0]} onChange={o => setPick([o])} /></div>}
-        {groups.map(([label, opts]) => <Pills list key={label} label={label} options={opts.map(([o]) => o)} value={cur} onToggle={toggle} />)}
+        {sc.pick === 1 && <Radios options={flatOptions(sc).map(([o]) => o)} value={cur[0]} onChange={o => setPick([o])} />}
+        {groups.map(([label, opts]) => <Pills key={label} label={label} options={opts.map(([o]) => o)} value={cur} onToggle={toggle} />)}
         {sc.pick === 0 && <label className="field"><span>노트에 적어 보세요 (&quot;모르겠어요&quot;도 괜찮아요)</span><textarea value={s.notes[i]} onChange={e => setNote(e.target.value)} /></label>}
         {sc.pick !== 0 && sc.note && <label className="field"><span>✏️ 위 보기가 조금 아쉽다면? 내 말로 적어 주세요 (선택)</span><input value={s.notes[i]} placeholder="예: 그때 있었던 일, 떠오른 사람" onChange={e => setNote(e.target.value)} /></label>}
         {sc.pick !== 0 && !sc.note && <label className="field"><span>{detail ? `✏️ 조금만 더: ${detail} (선택, 한 줄)` : "✏️ 위 보기가 조금 아쉽다면? 내 말로 적어 주세요 (선택)"}</span><input value={s.notes[i]} onChange={e => setNote(e.target.value)} /></label>}

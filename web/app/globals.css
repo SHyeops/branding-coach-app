@@ -462,9 +462,6 @@ h2.page-h { font-size: clamp(30px, 4vw, 48px); line-height: 1.15; font-weight: 8
 .check input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .check > span { color: var(--ink); font-weight: 600; }
 .check small { display: block; font-weight: 400; color: var(--ink-2); font-size: .85rem; }
-.one-col .radio-grid, .one-col .radio-grid.two { grid-template-columns: 1fr; }
-.pills.list { flex-direction: column; align-items: stretch; }
-.pills.list .pill { border-radius: 12px; text-align: left; padding: .75rem 1rem; }
 .trait-pair .radio-label { text-align: center; }
 .trait-pair .radio-label i { font-style: normal; color: var(--ink-2); font-weight: 500; margin: 0 .3em; }
 .trait-pair .radio-grid.two { grid-template-columns: 1fr 1fr; }
@@ -477,4 +474,3 @@ h2.page-h { font-size: clamp(30px, 4vw, 48px); line-height: 1.15; font-weight: 8
 .res-item .sv-story { font-size: 1.12rem; }
 .lab-trash-row { display: flex; justify-content: flex-end; margin: -.6rem 0 1rem; }
 .sheet-hint .choose-tag, .res-item .choose-tag { color: #2a2414; }
-.pills.list, .one-col .radio-grid { max-width: 680px; }
