@@ -103,12 +103,14 @@ def render(ts, today, src):
             k, tag = status(t, today)
             fill, stroke, dash, tc = STY[k]
             lines = wrap(name(t))
+            if k in ("done", "ahead", "skip"): o.append('<g opacity="0.28">')  # 끝난 일은 흐리게 (사용자 요청: 남은 일과 헷갈림)
             o.append(f'<rect x="{bx}" y="{y}" width="{bw}" height="{ch(t)}" rx="6" fill="{fill}" stroke="{stroke}"' + (f' stroke-dasharray="{dash}"' if dash else "") + "/>")
             o.append(f'<text x="{bx + 10}" y="{y + 21}" font-family="{M}" font-size="11" fill="{INK2}">{t["id"]}</text>')
             o.append(f'<text x="{bx + 42}" y="{y + 21}" font-family="{F}" font-size="13" font-weight="600" fill="{"#6b6b6b" if k == "skip" else INK}"' + (' text-decoration="line-through"' if k == "skip" else "") + ">" + "".join(f'<tspan x="{bx + 42}" dy="{0 if j == 0 else 17}">{e(l)}</tspan>' for j, l in enumerate(lines)) + "</text>")
             o.append(f'<text x="{bx + 42}" y="{y + ch(t) - 11}" font-family="{F}" font-size="12" fill="{tc}">{e(tag)}</text>')
+            if k in ("done", "ahead", "skip"): o.append("</g>")
             y += ch(t) + GAP
-    lg = [("■ 회색 ✓ = 계획한 날에 끝", INK2), ("■ 분홍 ⏩ = 계획보다 먼저 끝", PINK), ("┅ 분홍 ◐ = 미리 시작", PINK),
+    lg = [("흐린 카드 ✓ ⏩ = 끝난 일", INK2), ("┅ 분홍 ◐ = 미리 시작", PINK),
           ("┅ 노랑 ○ = 남은 일", AMB), ("■ 빨강 ⚠ = 늦음", RED), ("👥 = 다른 사람 필요(평일만)", INK2), ("취소선 = 제외", INK2)]
     xx, yy = 24, H - 40
     for t, c in lg:
