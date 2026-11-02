@@ -270,6 +270,7 @@ h2.page-h { font-size: clamp(30px, 4vw, 48px); line-height: 1.15; font-weight: 8
 .res-list { display: grid; gap: 14px; }
 .res-item { padding: 18px 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); transition: border-color .2s, background .2s; }
 .res-item.sel { border-color: var(--amber); background: #ffb02e12; }
+.res-item.pick { cursor: pointer; } .res-item.pick:hover { border-color: #ffb02e66; }
 .sl { font-size: .85rem; font-weight: 700; letter-spacing: .06em; color: var(--amber); margin-bottom: 8px; }
 .sv-main { font-size: 1.2rem; font-weight: 700; line-height: 1.5; color: var(--ink); }
 .sv-story { font-size: 1.02rem; line-height: 1.75; color: var(--ink); }

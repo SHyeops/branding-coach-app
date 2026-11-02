@@ -263,14 +263,14 @@ export default function App() {
         <h2 className="page-h">먼저 어떤 걸 브랜딩할지 알려 주세요</h2>
         <span className="radio-label">형태</span>
         <Radios two options={["상품", "서비스"]} value={s.kind} onChange={k => up({ kind: k as Kind })} fmt={k => (k === "서비스" ? "서비스 (레슨·클래스·코칭 포함)" : k)} />
-        <label className="field"><span>이름</span><input value={s.name} placeholder={ex.name} onChange={e => up({ name: e.target.value })} /></label>
+        <label className="field"><span>이름{s.nameTbd ? " (비워도 돼요)" : ""}</span><input value={s.name} placeholder={ex.name} onChange={e => up({ name: e.target.value })} /></label>
         <label className="check"><input type="checkbox" checked={!!s.nameTbd} onChange={e => up({ nameTbd: e.target.checked })} /> 아직 이름이 정해지지 않았어요 (가칭) — 리포트에서 이름 후보를 받아요</label>
-        <label className="field"><span>한 줄 설명</span><textarea value={s.desc} placeholder={ex.desc} onChange={e => up({ desc: e.target.value })} /></label>
+        <label className="field"><span>한 줄 설명 (필수)</span><textarea value={s.desc} placeholder={ex.desc} onChange={e => up({ desc: e.target.value })} /></label>
         <label className="field"><span>(선택) 이미 구상 중인 내용이 있다면 자유롭게 적어 주세요</span><textarea value={s.memo} placeholder={ex.memo} onChange={e => up({ memo: e.target.value })} /></label>
         <ExagNote text={`${s.name}\n${s.desc}\n${s.memo}`} />
         {warn && <div className="alert warning">{warn}</div>}
         <div className="btn-gap">
-          <button className="btn primary" onClick={() => (!s.name.trim() || !s.desc.trim() ? setWarn("이름과 한 줄 설명을 적어 주세요.") : up({ step: 2 }))}>시작하기</button>
+          <button className="btn primary" onClick={() => ((!s.name.trim() && !s.nameTbd) || !s.desc.trim() ? setWarn(s.desc.trim() ? "이름을 적거나 '아직 이름이 정해지지 않았어요'를 체크해 주세요." : "한 줄 설명을 적어 주세요. (무엇을, 누구에게 정도면 충분해요)") : up({ step: 2, ...(s.name.trim() ? {} : { name: "이름 미정" }) }))}>시작하기</button>
         </div>
       </>
     );
@@ -280,11 +280,9 @@ export default function App() {
   const scene = () => {
     const i = s.q, sc = D.SCENES[s.kind][i], cur = s.picks[i];
     const detail = cur.map(c => D.ASK_DETAIL[c]).find(Boolean);
-    const noteShown = sc.pick === 0 || !!sc.note || !!detail;
-    const note = noteShown ? s.notes[i] : "";
+    const note = s.notes[i]; // 모든 장면에 적기 칸이 있음 (맞는 보기가 없을 때 직접 적기)
     const setPick = (arr: string[]) => setS(p => {
-      const keepNote = sc.pick === 0 || sc.note || arr.some(c => D.ASK_DETAIL[c]); // 한 줄 칸이 사라지면 적은 말도 지움
-      const notes = keepNote ? p.notes : p.notes.map((x, j) => (j === i ? "" : x));
+      const notes = p.notes;
       return { ...p, picks: p.picks.map((x, j) => (j === i ? arr : x)), notes, answers: p.answers.map((x, j) => (j === i ? answerText(arr, notes[i]) : x)) };
     });
     const setNote = (v: string) => setS(p => ({ ...p, notes: p.notes.map((x, j) => (j === i ? v : x)), answers: p.answers.map((x, j) => (j === i ? answerText(p.picks[i], v) : x)) }));
@@ -293,7 +291,7 @@ export default function App() {
       ? (Array.isArray((sc.options![0] as unknown[])[1]) && Array.isArray(((sc.options![0] as unknown[])[1] as unknown[])[0])
         ? (sc.options as [string, Opt[]][]) : [[`최대 ${sc.pick}개까지 골라요`, sc.options as Opt[]]]) : [];
     const next = async () => {
-      if (sc.pick && !cur.length) return setWarn("마음에 가장 가까운 걸 하나 이상 골라 주세요.");
+      if (sc.pick && !cur.length && !note.trim()) return setWarn("마음에 가장 가까운 걸 고르거나, 맞는 게 없으면 아래에 직접 적어 주세요.");
       if (sc.pick > 1 && sc.pick < 9 && cur.length > sc.pick) return setWarn(`최대 ${sc.pick}개까지 골라 주세요. 가장 가까운 것만 남겨 볼까요?`);
       if (sc.pick === 0 && !note.trim()) return setWarn("한 줄이라도 적어 주세요.");
       if (sc.pick === 0 && note.trim().length < D.MIN_LEN && !s.asked_more[i]) {
@@ -316,7 +314,7 @@ export default function App() {
         {groups.map(([label, opts]) => <Pills key={label} label={label} options={opts.map(([o]) => o)} value={cur} onToggle={toggle} />)}
         {sc.pick === 0 && <label className="field"><span>노트에 적어 보세요 (&quot;모르겠어요&quot;도 괜찮아요)</span><textarea value={s.notes[i]} onChange={e => setNote(e.target.value)} /></label>}
         {sc.pick !== 0 && sc.note && <label className="field"><span>✏️ 노트에 한 줄 더 적기 (선택)</span><input value={s.notes[i]} placeholder="예: 그때 있었던 일, 떠오른 사람" onChange={e => setNote(e.target.value)} /></label>}
-        {sc.pick !== 0 && !sc.note && detail && <label className="field"><span>✏️ 조금만 더: {detail} (선택, 한 줄)</span><input value={s.notes[i]} onChange={e => setNote(e.target.value)} /></label>}
+        {sc.pick !== 0 && !sc.note && <label className="field"><span>{detail ? `✏️ 조금만 더: ${detail} (선택, 한 줄)` : "✏️ 맞는 보기가 없으면 직접 적기 (선택, 한 줄)"}</span><input value={s.notes[i]} onChange={e => setNote(e.target.value)} /></label>}
         <ExagNote text={note} />
         {warn && <div className="alert warning">{warn}</div>}
         {busy === "followup" && <div className="loading">조금 더 여쭤볼게요…</div>}
@@ -455,7 +453,7 @@ export default function App() {
       {opts.length > 1 ? <>
         <p className="caption">AI가 서로 다른 방향을 제안했어요. 내 생각에 더 가까운 안을 골라 주세요.</p>
         <Radios options={opts} value={optSel[k] ?? chosen(s, k)} onChange={v => setOptSel(o => ({ ...o, [k]: v }))} />
-        <div className="btn-gap"><button className="btn primary" onClick={() => up({ choice: { ...s.choice, [k]: optSel[k] ?? chosen(s, k) } })}>이 안으로 정하기</button></div>
+        <div className="btn-gap"><button className="btn primary" onClick={() => up({ choice: { ...s.choice, [k]: optSel[k] ?? chosen(s, k) } })}>{s.choice?.[k] === (optSel[k] ?? chosen(s, k)) ? "✓ 이 안으로 정했어요 — 결과에 반영됨" : "이 안으로 정하기"}</button></div>
       </> : sheetValue(k)}
       <div className="why-text">{String(it.why ?? "")}</div>
       {qs.length > 0 && <div className="why-quotes"><b>근거가 된 내 선택·내 말</b><Postits items={qs} /></div>}
@@ -484,7 +482,7 @@ export default function App() {
         <div className="res-grid">
           <div className="res-list">
             {ITEMS.filter(([k]) => k !== "names" || s.sheet?.names).map(([k, label]) => (
-              <div key={k} className={`res-item${k === sel ? " sel" : ""}`}>
+              <div key={k} className={`res-item${k === sel ? " sel" : " pick"}`} onClick={e => { if (k !== sel && !(e.target as HTMLElement).closest("button, a, input, label")) { up({ detail: k }); setOptSel({}); setPalSel(null); } }}>
                 <div className="sl">{label}</div>
                 {sheetValue(k)}
                 {k === "like" && <div className="item-actions">
