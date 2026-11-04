@@ -633,7 +633,7 @@ export default function App() {
     </>
   );
 
-  const edge = () => <EdgeLab seeds={[s.desc, ...s.notes].map(x => x.trim()).filter(Boolean)} />; // 고른 보기 문장은 엮기 어렵다는 피드백(11/2) → 내가 직접 쓴 말만, 눌러서 줄여 붙이게
+  const edge = () => <EdgeLab seeds={[s.desc, ...s.notes].map(x => x.trim()).filter(Boolean)} name={s.name} />; // 고른 보기 문장은 엮기 어렵다는 피드백(11/2) → 내가 직접 쓴 말만, 눌러서 줄여 붙이게
   const view = { "브랜드 코칭": coaching, "차별점 찾기": edge, "활용 템플릿": templates, "브랜드 스토리": stories, "1:1 멘토링": mentors }[page];
   return (
     <main className="container">

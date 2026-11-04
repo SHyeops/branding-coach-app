@@ -1,6 +1,7 @@
 "use client";
 // 차별점 찾기 탭: 늘어놓기 → 엮어 보기 → 버리기 → 고르기. AI 없이 사용자가 직접 (차고 벽에 종이를 붙이고, 실로 잇고, 구겨 버림)
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent as PE } from "react";
+import SaveImage, { MUTE, NAVY, card, h2 } from "./SaveImage";
 
 type Note = { id: number; text: string; cat: string; combo?: [string, string]; star?: boolean };
 type Saved = { notes: Note[]; trash: Note[]; step: number; next: number };
@@ -14,11 +15,16 @@ const STEPS = [
   { t: "고르기", h: "벽에 남은 종이가 내 차별점 후보예요. 가장 마음에 드는 것을 눌러 별을 붙이고(3개까지), 아래 방법으로 이번 주에 확인해 보세요." },
 ];
 const KEY = "fyg-edge-lab";
+const CHECKS: [string, string][] = [
+  ["따라 하기 시험", "같은 걸 파는 사람이 이 말을 그대로 쓰면 거짓말이 되나요? 그렇다면 내 것이에요."],
+  ["3명에게 묻기", "살 것 같은 사람 3명에게 “이런 곳이면 사겠어요?”라고 물어요. 손님이 있으면 손님에게, 없으면 지인에게."],
+  ["첫 줄에 쓰기", "2번에서 물어본 3명 중 2명 이상이 “사겠다”, “좋다”고 한 후보를 골라 가게 소개나 SNS 프로필 첫 줄에 써 봐요. 아무도 고르지 않았다면 1단계로 돌아가 더 늘어놓아요."],
+];
 // 쓰레기통 속 종이 공 자리 [left, bottom] px: 아래 줄은 통 안에 반쯤 잠기고, 많아지면 위로 넘쳐 쌓임
 const PILE = [[6, 50], [22, 52], [38, 50], [14, 63], [31, 64], [46, 60], [-3, 61], [22, 76], [6, 80]];
 const empty: Saved = { notes: [], trash: [], step: 0, next: 1 };
 
-export default function EdgeLab({ seeds }: { seeds: string[] }) {
+export default function EdgeLab({ seeds, name }: { seeds: string[]; name?: string }) {
   const [v, setV] = useState<Saved>(empty);
   const [text, setText] = useState(""), [cat, setCat] = useState(CATS[0][0]), [combo, setCombo] = useState("");
   const [sel, setSel] = useState<number[]>([]);
@@ -165,11 +171,38 @@ export default function EdgeLab({ seeds }: { seeds: string[] }) {
           {stars.length ? <ul>{stars.map(n => <li key={n.id}>{n.text}{n.combo && <small> ({n.combo.join(" + ")})</small>}</li>)}</ul>
             : <p className="caption">벽의 종이를 눌러 별을 붙여 보세요. 분홍색 엮은 종이가 좋은 후보예요.</p>}</div>
         <div><b>이번 주에 확인해 보기</b><ol>
-          <li><b>따라 하기 시험</b> — 같은 걸 파는 사람이 이 말을 그대로 쓰면 거짓말이 되나요? 그렇다면 내 것이에요.</li>
-          <li><b>3명에게 묻기</b> — 살 것 같은 사람 3명에게 &ldquo;이런 곳이면 사겠어요?&rdquo;라고 물어요. 손님이 있으면 손님에게, 없으면 지인에게.</li>
-          <li><b>첫 줄에 쓰기</b> — 2번에서 물어본 3명 중 <b>2명 이상</b>이 &ldquo;사겠다&rdquo;, &ldquo;좋다&rdquo;고 한 후보를 골라 가게 소개나 SNS 프로필 첫 줄에 써 봐요. 아무도 고르지 않았다면 1단계로 돌아가 더 늘어놓아요.</li>
+          {CHECKS.map(([t, d]) => <li key={t}><b>{t}</b> — {d}</li>)}
         </ol></div>
       </div>}
+
+      {v.step === 3 && v.notes.length > 0 && <SaveImage title="내 차별점 찾기 저장하기" fname={`${name || "내 브랜드"}_차별점찾기.png`} alt="내 차별점 찾기 결과"
+        caption="별 붙인 후보, 엮은 조합, 벽에 남은 종이와 이번 주 확인 방법을 긴 이미지 한 장으로 모았어요. 휴대폰 사진첩에 두고 볼 수 있어요.">
+        <div style={{ fontSize: 13, letterSpacing: ".08em", color: MUTE, fontWeight: 700 }}>MY EDGE · FROM YOUR GARAGE</div>
+        <div style={{ fontSize: 30, fontWeight: 800, margin: "4px 0" }}>{name || "내 브랜드"} <span style={{ fontSize: 14, color: "#fff", background: NAVY, borderRadius: 99, padding: "3px 10px", verticalAlign: "middle" }}>차별점 찾기</span></div>
+        <div style={{ ...card, marginTop: 18 }}>
+          <h2 style={h2}>⭐ 내 차별점 후보</h2>
+          {stars.length ? <ul style={{ margin: "2px 0", paddingLeft: 18 }}>{stars.map(n => <li key={n.id} style={{ fontSize: 18, fontWeight: 700 }}>{n.text}{n.combo && <span style={{ fontSize: 13, color: MUTE, fontWeight: 400 }}> ({n.combo.join(" + ")})</span>}</li>)}</ul>
+            : <div style={{ color: MUTE }}>아직 별을 붙인 후보가 없어요.</div>}
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginTop: 18 }}>
+          <div style={card}>
+            <h2 style={h2}>엮어 본 조합</h2>
+            {combos.length ? <ul style={{ margin: "2px 0", paddingLeft: 18 }}>{combos.map(n => <li key={n.id}>{n.combo![0]} + {n.combo![1]} → <b>{n.text}</b></li>)}</ul>
+              : <div style={{ color: MUTE }}>엮은 종이가 없어요.</div>}
+          </div>
+          <div style={card}>
+            <h2 style={h2}>벽에 남은 종이</h2>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{v.notes.filter(n => !n.combo).map(n =>
+              <span key={n.id} style={{ background: COLOR[n.cat] ?? "#fffdf7", border: "1px solid #0001", borderRadius: 4, padding: "3px 8px", fontSize: 14 }}>{n.text}</span>)}</div>
+            {v.trash.length > 0 && <div style={{ color: MUTE, fontSize: 13, marginTop: 10 }}>버린 종이: {v.trash.map(n => n.text).join(" / ")}</div>}
+          </div>
+        </div>
+        <div style={{ ...card, marginTop: 18 }}>
+          <h2 style={h2}>이번 주에 확인해 보기</h2>
+          <ol style={{ margin: "2px 0", paddingLeft: 20 }}>{CHECKS.map(([t, d]) => <li key={t}><b>{t}</b> — {d}</li>)}</ol>
+        </div>
+        <div style={{ fontSize: 12, color: MUTE, marginTop: 14 }}>AI 없이 내가 직접 늘어놓고, 엮고, 버려서 찾은 후보예요. 손님에게 확인해 보세요. · fromyourgarage.vercel.app</div>
+      </SaveImage>}
 
       <div className="btn-row">
         {v.step > 0 ? <button className="btn" onClick={() => go(v.step - 1)}>← {STEPS[v.step - 1].t}</button> : <span />}
