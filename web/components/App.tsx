@@ -1,5 +1,5 @@
 "use client";
-// From Your Garage — 화면 전체 (Streamlit app.py에서 옮김). 메뉴: 브랜드 코칭(0 홈 → 1 기본 정보 → 2 장면 6개 → 3 첫인상 → 4 확인 → 5 결과) / 차별점 찾기 / 활용 템플릿 / 브랜드 스토리 / 1:1 멘토링
+// From Your Garage — 화면 전체 (Streamlit app.py에서 옮김). 메뉴: 브랜드 코칭(0 홈 → 1 기본 정보 → 2 장면 6개 → 3 첫인상 → 4 확인 → 5 결과 → 6 차별점 다듬기) / 활용 템플릿 / 브랜드 스토리 / 1:1 멘토링
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import demoData from "@/lib/demo_P02.json";
 import OnePager from "./OnePager";
@@ -8,12 +8,12 @@ import ChannelMock from "./ChannelMock";
 import {
   D, N, type St, type Kind, type Brand, type Mentor, type Palette, type PromptName, type Opt,
   emptyState, flatOptions, brandType, answerText, unmatched, asList, parseSheet, parsePalettes, fallbackPalettes, chosen, sheetText, sheetQuotes, wallItems,
-  findExaggeration, userText,
+  findExaggeration, userText, myEdges, seedLab,
 } from "@/lib/logic";
 
-type Page = "브랜드 코칭" | "차별점 찾기" | "활용 템플릿" | "브랜드 스토리" | "1:1 멘토링";
-const PAGES: Page[] = ["브랜드 코칭", "차별점 찾기", "활용 템플릿", "브랜드 스토리", "1:1 멘토링"];
-const STEPS = ["기본 정보", "생각 정리", "첫인상", "확인", "리포트"];
+type Page = "브랜드 코칭" | "활용 템플릿" | "브랜드 스토리" | "1:1 멘토링";
+const PAGES: Page[] = ["브랜드 코칭", "활용 템플릿", "브랜드 스토리", "1:1 멘토링"];
+const STEPS = ["기본 정보", "생각 정리", "첫인상", "확인", "리포트", "차별점 다듬기"];
 const ITEMS: [string, string][] = [["type", "브랜드 유형"], ["names", "이름 후보"], ["edge", "나만의 차별점"], ["story", "내 브랜드 이야기"], ["customer", "주요 고객층"], ["pain", "고객의 고민"], ["mission", "미션"], ["message", "핵심 메시지"],
   ["slogans", "슬로건"], ["personality", "성격·말투"], ["strategy", "판매 전략"], ["color", "아이덴티티 컬러"], ["mood", "무드 키워드"],
   ["like", "닮은 브랜드"], ["todo", "이번 주 할 일"], ["advice", "더 생각해 볼 것"]];
@@ -222,6 +222,10 @@ export default function App() {
       });
   }, [s.step, s.reflect, s.sheet, s.palettes, s.err]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // 6단계: 처음 열면 리포트의 AI 차별점을 벽에 미리 붙임. 돌아오면 '나만의 차별점' 상세로
+  const toLab = () => up({ step: 6, lab: s.lab ?? seedLab(s) });
+  const edgeStep = () => s.lab ? <EdgeLab seeds={[s.desc, ...s.notes].map(x => x.trim()).filter(Boolean)} // 고른 보기 문장은 엮기 어렵다는 피드백(11/2) → 내가 직접 쓴 말만, 눌러서 줄여 붙이게
+    v={s.lab} setV={f => setS(p => ({ ...p, lab: f(p.lab ?? seedLab(p)) }))} onDone={() => up({ step: 5, detail: "edge" })} /> : null;
   const reset = () => { setS({ ...emptyState(), step: 1 }); setPage("브랜드 코칭"); window.history.replaceState(null, "", "/"); };
   const [bt, reasons] = brandType(s.kind, s.picks);
   const byLogo = Object.fromEntries(D.BRANDS.map(b => [b.logo, b])) as Record<string, Brand>;
@@ -403,7 +407,11 @@ export default function App() {
     const v = it.value;
     if (k === "values" || k === "mood") return <div className="sv-chips">{asList(v).map((x, i) => <span key={i}>{String(x)}</span>)}</div>;
     if (k === "story") return <div className="sv-story"><Soft t={v} /></div>;
-    if (k === "edge") return <ol className="sv-list">{asList(v).map((x, i) => <li key={i}>{String(x)}</li>)}</ol>;
+    if (k === "edge") { const mine = myEdges(s); return <>
+      <ol className="sv-list">{asList(v).map((x, i) => <li key={i}>{String(x)}</li>)}</ol>
+      {mine.length > 0 && <div className="sv-mine"><b>⭐ 내가 찾은 차별점</b><ul className="sv-list">{mine.map(x => <li key={x}>{x}</li>)}</ul></div>}
+      <div className="item-actions"><button className="btn sm" onClick={toLab}>{mine.length ? "차별점 더 다듬기" : "내 차별점 더 찾기"}</button></div>
+    </>; }
     if (k === "advice") return <ul className="sv-list">{asList(v).map((x, i) => <li key={i}>{String(x)}</li>)}</ul>;
     if (k === "todo") return <ol className="sv-list">{asList(v).map((x, i) => <li key={i}>{String(x)}</li>)}</ol>;
     return (
@@ -513,7 +521,7 @@ export default function App() {
         <p className="caption">근거 확인: AI가 인용한 내 답 {quotes.length}개 중 {quotes.length - bad.length}개가 입력과 그대로 일치해요.
           {bad.length > 0 && ` 일치하지 않는 인용: ${bad.join(" / ")}.`} AI가 만든 글이니 사실과 다른 부분이 없는지 직접 확인해 주세요.</p>
         <div className="btn-row">
-          <button className="btn primary" onClick={() => setPage("차별점 찾기")}>내 차별점 직접 찾아보기</button>
+          <button className="btn primary" onClick={toLab}>{myEdges(s).length ? "6. 차별점 더 다듬기" : "6. 내 차별점 더 찾기"}</button>
           <button className="btn" onClick={() => setPage("활용 템플릿")}>이 시트로 채널별 문구 만들기</button>
           <button className="btn" onClick={() => setPage("1:1 멘토링")}>멘토와 이야기해 보기 (첫 1회 무료)</button>
         </div>
@@ -525,7 +533,7 @@ export default function App() {
   const coaching = () => (
     <>
       {s.step > 0 && <div className="stepper">{STEPS.map((n, k) => <div key={n} className={k + 1 === s.step ? "now" : k + 1 < s.step ? "done" : ""}>{k + 1}. {n}</div>)}</div>}
-      {[home, basics, scene, signboard, confirm, report][s.step]()}
+      {[home, basics, scene, signboard, confirm, report, edgeStep][s.step]()}
       {s.step === 5 && <div className="btn-gap"><button className="btn" onClick={reset}>처음부터 다시</button></div>}
     </>
   );
@@ -633,8 +641,7 @@ export default function App() {
     </>
   );
 
-  const edge = () => <EdgeLab seeds={[s.desc, ...s.notes].map(x => x.trim()).filter(Boolean)} name={s.name} />; // 고른 보기 문장은 엮기 어렵다는 피드백(11/2) → 내가 직접 쓴 말만, 눌러서 줄여 붙이게
-  const view = { "브랜드 코칭": coaching, "차별점 찾기": edge, "활용 템플릿": templates, "브랜드 스토리": stories, "1:1 멘토링": mentors }[page];
+  const view = { "브랜드 코칭": coaching, "활용 템플릿": templates, "브랜드 스토리": stories, "1:1 멘토링": mentors }[page];
   return (
     <main className="container">
       {/* 셔터는 등장 효과(transform)가 걸린 상자 밖에 둬야 화면 전체를 덮음 (안에 두면 가운데 상자 폭만큼만 그려져 글자가 잘림) */}

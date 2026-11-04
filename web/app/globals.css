@@ -281,6 +281,8 @@ h2.page-h { font-size: clamp(30px, 4vw, 48px); line-height: 1.15; font-weight: 8
 .sv-chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .sv-chips span { padding: .35rem .85rem; border-radius: 999px; font-weight: 600; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line-2); }
 .sv-list { margin: 6px 0 0; padding-left: 1.2em; color: var(--ink); line-height: 1.7; }
+.sv-mine { margin-top: 10px; padding: 8px 12px; border-radius: 8px; background: #ffd34d1f; border: 1px dashed #ffd34d66; }
+.sv-mine b { font-size: .95rem; }
 .sv-swatch { display: flex; gap: 6px; }
 .sv-swatch i { width: 54px; height: 34px; border-radius: 8px; border: 1px solid #ffffff22; }
 .item-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; padding-top: 4px; }

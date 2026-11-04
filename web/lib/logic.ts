@@ -18,12 +18,16 @@ export type Item = { value?: unknown; options?: unknown; why?: unknown; quotes?:
 export type Sheet = Record<string, Item>;
 export type Palette = { name?: string; colors: { hex: string; role?: string }[]; why?: string; quote?: string; fallback?: boolean };
 
+// 6단계 차별점 다듬기 벽 (코칭 상태 안에 둠 → '처음부터 다시'면 같이 비워짐)
+export type LabNote = { id: number; text: string; cat: string; combo?: [string, string]; star?: boolean };
+export type Lab = { notes: LabNote[]; trash: LabNote[]; step: number; next: number };
+
 export type St = {
   step: number; q: number; kind: Kind; name: string; nameTbd?: boolean; desc: string; memo: string;
   answers: string[]; picks: string[][]; notes: string[]; asked_more: boolean[]; more: string[];
   traits?: string[]; tone?: string; fix?: string; reflect?: string;
   sheet?: Sheet | null; palettes?: Palette[]; pal: number; brief?: string; err?: string | null;
-  detail: string; choice: Record<string, string>; tpl: Record<string, string>;
+  detail: string; choice: Record<string, string>; tpl: Record<string, string>; lab?: Lab;
 };
 
 type Data = {
@@ -144,7 +148,17 @@ export function chosen(s: St, k: string) {
 export function sheetText(s: St) {
   if (!s.sheet) return "";
   const val = (k: string) => ("options" in s.sheet![k] ? chosen(s, k) : asList(s.sheet![k].value).map(String).join(", "));
-  return Object.entries(D.SHEET_LABELS).map(([k, label]) => `${label}: ${val(k)}`).join("\n");
+  const mine = myEdges(s);
+  return [...Object.entries(D.SHEET_LABELS).map(([k, label]) => `${label}: ${val(k)}`), ...(mine.length ? [`내가 직접 찾은 차별점: ${mine.join(", ")}`] : [])].join("\n");
+}
+
+/** 6단계에서 별을 붙인 '내가 찾은 차별점' (엮은 종이면 무엇과 무엇을 엮었는지 함께) */
+export const myEdges = (s: St) => (s.lab?.notes ?? []).filter(n => n.star).map(n => n.combo ? `${n.text} (${n.combo.join(" + ")})` : n.text);
+
+/** 6단계 벽을 처음 열 때: 리포트의 '나만의 차별점'을 짧게(— 앞부분) 미리 붙여 둠 */
+export function seedLab(s: St): Lab {
+  const edges = asList(s.sheet?.edge?.value).map(x => String(x).split(/\s+—\s+/)[0].trim().slice(0, 40)).filter(Boolean);
+  return { notes: edges.map((text, i) => ({ id: i + 1, text, cat: "AI 차별점" })), trash: [], step: 0, next: edges.length + 1 };
 }
 
 export function sheetQuotes(s: St) {

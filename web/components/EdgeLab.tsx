@@ -1,20 +1,17 @@
 "use client";
-// 차별점 찾기 탭: 늘어놓기 → 엮어 보기 → 버리기 → 고르기. AI 없이 사용자가 직접 (차고 벽에 종이를 붙이고, 실로 잇고, 구겨 버림)
+// 코칭 6단계 차별점 다듬기: 리포트의 AI 차별점이 미리 붙은 벽에서 늘어놓기 → 엮어 보기 → 버리기 → 고르기(별 = 리포트에 반영). 새 AI 호출 없음
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent as PE } from "react";
-import SaveImage, { MUTE, NAVY, card, h2 } from "./SaveImage";
+import type { Lab as Saved, LabNote as Note } from "@/lib/logic";
 
-type Note = { id: number; text: string; cat: string; combo?: [string, string]; star?: boolean };
-type Saved = { notes: Note[]; trash: Note[]; step: number; next: number };
 
-const CATS: [string, string][] = [["할 줄 아는 것", "#fff3a8"], ["좋아하는 것", "#cdeccd"], ["겪은 일·경력", "#cfe3ff"], ["칭찬받은 것", "#ffd9b8"], ["코칭에서", "#fffdf7"]];
+const CATS: [string, string][] = [["AI 차별점", "#e4dcff"], ["할 줄 아는 것", "#fff3a8"], ["좋아하는 것", "#cdeccd"], ["겪은 일·경력", "#cfe3ff"], ["칭찬받은 것", "#ffd9b8"], ["코칭에서", "#fffdf7"]];
 const COLOR = Object.fromEntries(CATS) as Record<string, string>;
 const STEPS = [
-  { t: "늘어놓기", h: "할 줄 아는 것, 좋아하는 것, 겪은 일을 사소한 것까지 벽에 붙여요. 10장이 목표예요." },
+  { t: "늘어놓기", h: "보라색 종이는 리포트에서 AI가 찾은 차별점이에요. 그 옆에 할 줄 아는 것, 좋아하는 것, 겪은 일을 사소한 것까지 붙여요. 10장이 목표예요." },
   { t: "엮어 보기", h: "종이 하나를 누른 채 보드마카로 다른 종이까지 선을 그어 보세요(두 장을 차례로 눌러도 돼요). 둘을 합치면 어떤 일이 되나요? 예) 회계 경력 + 베이킹 → 원가를 공개하는 빵집" },
   { t: "버리기", h: "하기 싫은 것, 같은 걸 파는 3곳도 똑같이 말할 수 있는 것을 눌러 구겨 버려요. 쓰레기통을 누르면 되살아나요." },
-  { t: "고르기", h: "벽에 남은 종이가 내 차별점 후보예요. 가장 마음에 드는 것을 눌러 별을 붙이고(3개까지), 아래 방법으로 이번 주에 확인해 보세요." },
+  { t: "고르기", h: "벽에 남은 종이가 내 차별점 후보예요. 가장 마음에 드는 것을 눌러 별을 붙이면(3개까지) 리포트의 '나만의 차별점'에 들어가요." },
 ];
-const KEY = "fyg-edge-lab";
 const CHECKS: [string, string][] = [
   ["따라 하기 시험", "같은 걸 파는 사람이 이 말을 그대로 쓰면 거짓말이 되나요? 그렇다면 내 것이에요."],
   ["3명에게 묻기", "살 것 같은 사람 3명에게 “이런 곳이면 사겠어요?”라고 물어요. 손님이 있으면 손님에게, 없으면 지인에게."],
@@ -22,11 +19,9 @@ const CHECKS: [string, string][] = [
 ];
 // 쓰레기통 속 종이 공 자리 [left, bottom] px: 아래 줄은 통 안에 반쯤 잠기고, 많아지면 위로 넘쳐 쌓임
 const PILE = [[6, 50], [22, 52], [38, 50], [14, 63], [31, 64], [46, 60], [-3, 61], [22, 76], [6, 80]];
-const empty: Saved = { notes: [], trash: [], step: 0, next: 1 };
 
-export default function EdgeLab({ seeds, name }: { seeds: string[]; name?: string }) {
-  const [v, setV] = useState<Saved>(empty);
-  const [text, setText] = useState(""), [cat, setCat] = useState(CATS[0][0]), [combo, setCombo] = useState("");
+export default function EdgeLab({ seeds, v, setV, onDone }: { seeds: string[]; v: Saved; setV: (f: (o: Saved) => Saved) => void; onDone: () => void }) {
+  const [text, setText] = useState(""), [cat, setCat] = useState(CATS[1][0]), [combo, setCombo] = useState("");
   const [sel, setSel] = useState<number[]>([]);
   const [fly, setFly] = useState<{ id: number; dx: number; dy: number } | null>(null);
   const [gulp, setGulp] = useState(0);
@@ -35,10 +30,6 @@ export default function EdgeLab({ seeds, name }: { seeds: string[]; name?: strin
   const wall = useRef<HTMLDivElement>(null), trashEl = useRef<HTMLButtonElement>(null);
   const el = (id: number) => wall.current?.querySelector<HTMLElement>(`[data-id="${id}"]`);
 
-  // 이 브라우저에만 저장 (새로고침해도 남게). 막힌 브라우저에선 그냥 저장 안 함
-  const [loaded, setLoaded] = useState(false); // 불러오기 전에 빈 벽으로 덮어쓰지 않게
-  useEffect(() => { try { const x = localStorage.getItem(KEY); if (x) setV({ ...empty, ...JSON.parse(x) }); } catch {} setLoaded(true); }, []);
-  useEffect(() => { if (loaded) try { localStorage.setItem(KEY, JSON.stringify(v)); } catch {} }, [v, loaded]);
 
   // 고른 두 장 사이의 빨간 실
   useLayoutEffect(() => {
@@ -108,8 +99,8 @@ export default function EdgeLab({ seeds, name }: { seeds: string[]; name?: strin
 
   return (
     <>
-      <div className="hero story-hero"><span className="eyebrow">FIND YOUR EDGE</span><div className="page-title">내 차별점, 직접 찾기</div>
-        <p className="hero-sub">AI가 대신 찾아 준 차별점보다 내가 찾은 게 오래 가요. 할 줄 아는 걸 늘어놓고, 엮고, 버려 보세요. 손님이 아직 없어도 할 수 있어요.</p></div>
+      <div className="hero story-hero"><span className="eyebrow">FIND YOUR EDGE</span><div className="page-title">내 차별점 다듬기</div>
+        <p className="hero-sub">리포트에서 AI가 찾은 차별점을 벽에 붙여 두었어요. 내가 아는 것과 엮고, 남도 말할 수 있는 건 버려서 내 것으로 다듬어 보세요. 손님이 아직 없어도 할 수 있어요.</p></div>
 
       <ol className="lab-steps">
         {STEPS.map((x, k) => <li key={x.t}><button className={k === v.step ? "on" : k < v.step ? "done" : ""} aria-current={k === v.step} onClick={() => go(k)}><b>{k + 1}</b>{x.t}</button></li>)}
@@ -117,7 +108,7 @@ export default function EdgeLab({ seeds, name }: { seeds: string[]; name?: strin
       <p className="lab-hint">{STEPS[v.step].h}</p>
 
       {v.step === 0 && <div className="lab-input">
-        <div className="lab-cats">{CATS.slice(0, seeds.length ? 5 : 4).map(([c, col]) => <button key={c} className={c === cat ? "on" : ""} style={{ "--c": col } as CSSProperties} onClick={() => setCat(c)}>{c}</button>)}</div>
+        <div className="lab-cats">{CATS.slice(1, seeds.length ? 6 : 5).map(([c, col]) => <button key={c} className={c === cat ? "on" : ""} style={{ "--c": col } as CSSProperties} onClick={() => setCat(c)}>{c}</button>)}</div>
         <div className="lab-row">
           <input value={text} maxLength={40} placeholder={{ "할 줄 아는 것": "예: 엑셀로 원가 계산", "좋아하는 것": "예: 새벽 시장 구경", "겪은 일·경력": "예: 회계 사무소 5년", "칭찬받은 것": "예: 설명을 쉽게 한다", "코칭에서": "아래 버튼을 누르고 짧게 줄여 보세요" }[cat]}
             onChange={e => setText(e.target.value)} onKeyDown={enter(stick)} aria-label={`${cat} 적기`} />
@@ -167,7 +158,7 @@ export default function EdgeLab({ seeds, name }: { seeds: string[]; name?: strin
       {v.step === 1 && sel.length < 2 && <p className="caption">🖊️ 종이에서 다른 종이까지 선을 그어 보세요{sel.length === 1 ? " (한 장 골랐어요, 한 장 더)" : ""}. 엮은 종이는 분홍색으로 붙어요{combos.length ? ` (지금 ${combos.length}장)` : ""}.</p>}
 
       {v.step === 3 && <div className="lab-final">
-        <div><b>⭐ 내 차별점 후보</b>
+        <div><b>⭐ 내 차별점 후보 → 리포트에 들어가요</b>
           {stars.length ? <ul>{stars.map(n => <li key={n.id}>{n.text}{n.combo && <small> ({n.combo.join(" + ")})</small>}</li>)}</ul>
             : <p className="caption">벽의 종이를 눌러 별을 붙여 보세요. 분홍색 엮은 종이가 좋은 후보예요.</p>}</div>
         <div><b>이번 주에 확인해 보기</b><ol>
@@ -175,39 +166,11 @@ export default function EdgeLab({ seeds, name }: { seeds: string[]; name?: strin
         </ol></div>
       </div>}
 
-      {v.step === 3 && v.notes.length > 0 && <SaveImage title="내 차별점 찾기 저장하기" fname={`${name || "내 브랜드"}_차별점찾기.png`} alt="내 차별점 찾기 결과"
-        caption="별 붙인 후보, 엮은 조합, 벽에 남은 종이와 이번 주 확인 방법을 긴 이미지 한 장으로 모았어요. 휴대폰 사진첩에 두고 볼 수 있어요.">
-        <div style={{ fontSize: 13, letterSpacing: ".08em", color: MUTE, fontWeight: 700 }}>MY EDGE · FROM YOUR GARAGE</div>
-        <div style={{ fontSize: 30, fontWeight: 800, margin: "4px 0" }}>{name || "내 브랜드"} <span style={{ fontSize: 14, color: "#fff", background: NAVY, borderRadius: 99, padding: "3px 10px", verticalAlign: "middle" }}>차별점 찾기</span></div>
-        <div style={{ ...card, marginTop: 18 }}>
-          <h2 style={h2}>⭐ 내 차별점 후보</h2>
-          {stars.length ? <ul style={{ margin: "2px 0", paddingLeft: 18 }}>{stars.map(n => <li key={n.id} style={{ fontSize: 18, fontWeight: 700 }}>{n.text}{n.combo && <span style={{ fontSize: 13, color: MUTE, fontWeight: 400 }}> ({n.combo.join(" + ")})</span>}</li>)}</ul>
-            : <div style={{ color: MUTE }}>아직 별을 붙인 후보가 없어요.</div>}
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginTop: 18 }}>
-          <div style={card}>
-            <h2 style={h2}>엮어 본 조합</h2>
-            {combos.length ? <ul style={{ margin: "2px 0", paddingLeft: 18 }}>{combos.map(n => <li key={n.id}>{n.combo![0]} + {n.combo![1]} → <b>{n.text}</b></li>)}</ul>
-              : <div style={{ color: MUTE }}>엮은 종이가 없어요.</div>}
-          </div>
-          <div style={card}>
-            <h2 style={h2}>벽에 남은 종이</h2>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{v.notes.filter(n => !n.combo).map(n =>
-              <span key={n.id} style={{ background: COLOR[n.cat] ?? "#fffdf7", border: "1px solid #0001", borderRadius: 4, padding: "3px 8px", fontSize: 14 }}>{n.text}</span>)}</div>
-            {v.trash.length > 0 && <div style={{ color: MUTE, fontSize: 13, marginTop: 10 }}>버린 종이: {v.trash.map(n => n.text).join(" / ")}</div>}
-          </div>
-        </div>
-        <div style={{ ...card, marginTop: 18 }}>
-          <h2 style={h2}>이번 주에 확인해 보기</h2>
-          <ol style={{ margin: "2px 0", paddingLeft: 20 }}>{CHECKS.map(([t, d]) => <li key={t}><b>{t}</b> — {d}</li>)}</ol>
-        </div>
-        <div style={{ fontSize: 12, color: MUTE, marginTop: 14 }}>AI 없이 내가 직접 늘어놓고, 엮고, 버려서 찾은 후보예요. 손님에게 확인해 보세요. · fromyourgarage.vercel.app</div>
-      </SaveImage>}
 
       <div className="btn-row">
-        {v.step > 0 ? <button className="btn" onClick={() => go(v.step - 1)}>← {STEPS[v.step - 1].t}</button> : <span />}
+        {v.step > 0 ? <button className="btn" onClick={() => go(v.step - 1)}>← {STEPS[v.step - 1].t}</button> : <button className="btn" onClick={onDone}>← 리포트로</button>}
         {v.step < 3 ? <button className="btn primary" disabled={v.step === 0 && v.notes.length < 2} onClick={() => go(v.step + 1)}>다음: {STEPS[v.step + 1].t}</button>
-          : <button className="btn" onClick={() => { if (confirm("벽을 모두 비우고 처음부터 할까요?")) { setSel([]); setV(empty); } }}>벽 비우고 다시 하기</button>}
+          : <button className="btn primary" onClick={onDone}>{stars.length ? `별 ${stars.length}개 리포트에 반영하기` : "리포트로 돌아가기"}</button>}
       </div>
     </>
   );
